@@ -44,6 +44,7 @@ let state = {
   panelCards: [],
   rightPanelMode: 'ask', // 'ask' | 'claim'
   scoreOverlayOpen: false,
+  lastAskResult: null,   // stored so score overlay can hide/restore the ask slide
   inCreateFlow: false,
 };
 
@@ -751,6 +752,12 @@ function buildCardFaceHTML(card, size = 'sm') {
 }
 
 function showEventOverlay({ askerId, askerName, targetId, targetName, card, hadCard }) {
+  // Store for score-overlay restore
+  state.lastAskResult = { askerId, askerName, targetId, targetName, card, hadCard };
+
+  // If score overlay is open, don't show the ask slide now — it'll restore when score closes
+  if (state.scoreOverlayOpen) return;
+
   const me = socket.id;
   const askerLabel = askerId === me ? `${askerName} (you)` : askerName;
   const targetLabel = targetId === me ? `${targetName} (you)` : targetName;
@@ -920,8 +927,59 @@ function handleTurnChange(room) {
 // ===================== SCORE OVERLAY =====================
 function toggleScoreOverlay() {
   state.scoreOverlayOpen = !state.scoreOverlayOpen;
-  document.getElementById('score-overlay').classList.toggle('hidden', !state.scoreOverlayOpen);
-  if (state.scoreOverlayOpen) renderScoreOverlay();
+  const scoreEl = document.getElementById('score-overlay');
+  const eventEl = document.getElementById('event-overlay');
+
+  if (state.scoreOverlayOpen) {
+    // Hide the ask/result slide while score is open
+    if (!eventEl.classList.contains('hidden')) {
+      if (eventOverlayTimer) { clearTimeout(eventOverlayTimer); eventOverlayTimer = null; }
+      eventEl.classList.add('hidden');
+      eventEl.classList.remove('show');
+    }
+    scoreEl.classList.remove('hidden');
+    renderScoreOverlay();
+  } else {
+    scoreEl.classList.add('hidden');
+    // Restore the last ask result slide if there is one
+    if (state.lastAskResult) {
+      restoreAskResultOverlay(state.lastAskResult);
+    }
+  }
+}
+
+function restoreAskResultOverlay({ askerId, askerName, targetId, targetName, card, hadCard }) {
+  const me = socket.id;
+  const askerLabel = askerId === me ? `${askerName} (you)` : askerName;
+  const targetLabel = targetId === me ? `${targetName} (you)` : targetName;
+
+  const overlay = document.getElementById('event-overlay');
+  const box     = document.getElementById('event-box');
+  const cardEl  = document.getElementById('event-card-el');
+  const names   = document.getElementById('event-names');
+  const msgEl   = document.getElementById('event-msg');
+  const symEl   = document.getElementById('event-sym');
+
+  // Reset any claim-mode inline styles
+  box.style.cssText = '';
+  names.style.display = '';
+  msgEl.style.cssText = '';
+
+  cardEl.innerHTML = buildCardFaceHTML(card, 'lg');
+  names.textContent = `${askerLabel} → ${targetLabel}`;
+
+  if (hadCard) {
+    box.className = 'got-it';
+    msgEl.textContent = `✓ ${targetLabel} had the ${card}`;
+    symEl.textContent = '!';
+  } else {
+    box.className = 'no-card';
+    msgEl.textContent = `✗ ${targetLabel} doesn't have the ${card}`;
+    symEl.textContent = '✕';
+  }
+
+  overlay.classList.remove('hidden');
+  overlay.classList.add('show');
 }
 
 function renderScoreOverlay() {
@@ -1007,8 +1065,9 @@ function goHome() {
   state.selectedCard = null; state.selectedTarget = null;
   state.panelCards = []; state.askSuit = null; state.rightPanelMode = 'ask';
   state.claimSuit = null; state.claimTeam = null; state.claimAssignments = {};
-  state.scoreOverlayOpen = false;
+  state.scoreOverlayOpen = false; state.lastAskResult = null;
   document.getElementById('score-overlay').classList.add('hidden');
+  document.getElementById('event-overlay').classList.add('hidden');
   document.getElementById('exit-modal').classList.add('hidden');
   document.getElementById('event-overlay').classList.add('hidden');
   document.getElementById('nav').classList.add('hidden');
