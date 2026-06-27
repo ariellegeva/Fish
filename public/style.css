@@ -430,21 +430,11 @@ label { display: block; font-size: 13px; color: var(--text-muted); margin-bottom
 }
 .rp-tab:hover { color: #c8b89a; }
 .rp-tab.active { color: #fff; border-bottom-color: #fff; }
-.rp-score-btn {
-  background: transparent;
-  border: 1px solid #3a3a3a;
-  color: #6a5a4a;
-  font-size: 11px;
-  font-weight: 700;
-  font-family: 'Nunito', sans-serif;
-  padding: 4px 9px;
-  border-radius: 6px;
-  cursor: pointer;
-  white-space: nowrap;
-  margin-left: 4px;
-  margin-bottom: 4px;
+/* claim card selected (waiting for player click on board) */
+.claim-card-cell .card-face.claim-selected {
+  border-color: #3a6bc4;
+  box-shadow: 0 0 0 3px rgba(58,107,196,.4);
 }
-.rp-score-btn:hover { color: #c8b89a; border-color: #6a5a4a; }
 
 #rp-ask, #rp-claim, #rp-award {
   display: flex; flex-direction: column;
@@ -516,6 +506,7 @@ label { display: block; font-size: 13px; color: var(--text-muted); margin-bottom
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .claim-player-btn.assigned { background: rgba(58,107,196,.25); border-color: #3a6bc4; color: #7aafff; }
+.claim-player-btn.waiting  { background: rgba(76,175,110,.2);  border-color: #4caf6e; color: #4caf6e; }
 .claim-player-btn:hover { border-color: #6a5a4a; color: #c8b89a; }
 
 .claim-submit-btn {
@@ -645,23 +636,43 @@ label { display: block; font-size: 13px; color: var(--text-muted); margin-bottom
   border-bottom: 3px solid var(--border);
 }
 
-/* Turn banner overlay */
+/* Score corner button */
+#score-corner-btn {
+  position: absolute;
+  top: 12px; right: 12px;
+  background: rgba(30,30,30,.82);
+  border: 1.5px solid #3a3a3a;
+  color: #c8b89a;
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 13px; font-weight: 700;
+  font-family: 'Nunito', sans-serif;
+  cursor: pointer;
+  z-index: 25;
+  backdrop-filter: blur(4px);
+  transition: background .15s;
+}
+#score-corner-btn:hover { background: rgba(50,50,50,.9); color: #fff; }
+
+/* Turn banner — centered in table */
 #turn-banner-v2 {
   position: absolute;
-  top: 12px; left: 50%; transform: translateX(-50%);
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
   background: rgba(45,45,45,.85);
   color: #fff;
-  padding: 6px 20px;
-  border-radius: 20px;
-  font-size: 14px; font-weight: 800;
+  padding: 8px 24px;
+  border-radius: 24px;
+  font-size: 15px; font-weight: 800;
   letter-spacing: .03em;
   z-index: 20;
   white-space: nowrap;
   display: none;
+  pointer-events: none;
 }
-#turn-banner-v2.mine { background: rgba(45,130,45,.9); }
-#turn-banner-v2.other { background: rgba(45,45,45,.85); }
-#turn-banner-v2.show { display: block; }
+#turn-banner-v2.mine  { background: rgba(76,175,110,.92); }
+#turn-banner-v2.other { background: rgba(45,45,45,.82); }
+#turn-banner-v2.show  { display: block; }
 
 /* Player tiles on the oval */
 .player-oval-tile {

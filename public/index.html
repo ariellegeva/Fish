@@ -219,6 +219,7 @@
     <div id="game-table-area">
       <div id="turn-banner-v2"></div>
       <div id="oval-players"></div>
+      <button id="score-corner-btn" onclick="toggleScoreOverlay()">Score ▸</button>
 
       <!-- Score overlay (floating over game table) -->
       <div id="score-overlay" class="hidden">
@@ -288,7 +289,6 @@
     <div class="rp-tabs-bar">
       <button class="rp-tab" id="rp-tab-ask"   onclick="showRightPanel('ask')">ASK</button>
       <button class="rp-tab" id="rp-tab-claim" onclick="showRightPanel('claim')">claim</button>
-      <button class="rp-score-btn" onclick="toggleScoreOverlay()">Score ▸</button>
     </div>
 
     <!-- ASK mode -->
@@ -303,11 +303,6 @@
       <div id="claim-suit-list"></div>
     </div>
 
-    <!-- Award suits (admin fallback) -->
-    <div id="rp-award" class="hidden">
-      <div class="panel-section-label" style="padding:10px 16px 6px">Admin: award suits</div>
-      <div class="panel-suit-list" id="panel-suits-list"></div>
-    </div>
 
   </div>
 </div>

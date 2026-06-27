@@ -38,7 +38,8 @@ let state = {
   // claim state
   claimSuit: null,
   claimTeam: null,
-  claimAssignments: {}, // card -> playerId
+  claimAssignments: {},   // card -> playerId
+  claimSelectedCard: null, // card waiting for player click
   // panel
   panelCards: [],
   rightPanelMode: 'ask', // 'ask' | 'claim'
@@ -365,8 +366,10 @@ function renderOvalPlayers() {
 
     const isCurrent = p.id === room.currentTurn;
     const isOpponent = me && p.team !== me.team;
-    const isClickable = myTurn && isOpponent && p.connected && state.selectedCard;
-    const isTargeted = state.selectedTarget === p.id;
+    const inClaimMode = state.rightPanelMode === 'claim' && state.claimSelectedCard;
+    const isClickable = (myTurn && isOpponent && p.connected && state.selectedCard) || inClaimMode;
+    const isTargeted = state.selectedTarget === p.id ||
+      (inClaimMode && state.claimAssignments[state.claimSelectedCard] === p.id);
     const isMe = p.id === socket.id;
 
     const cardCount = p.cardCount || 0;
@@ -384,7 +387,11 @@ function renderOvalPlayers() {
       isTargeted?'targeted':'', !p.connected?'disconnected':''].join(' ');
     tile.style.left = xPct + '%';
     tile.style.top = yPct + '%';
-    if (isClickable || (myTurn && isOpponent)) tile.onclick = () => selectTarget(p.id);
+    if (inClaimMode) {
+      tile.onclick = () => assignClaimPlayer(p.id);
+    } else if (isClickable || (myTurn && isOpponent)) {
+      tile.onclick = () => selectTarget(p.id);
+    }
 
     tile.innerHTML = `
       <div class="player-avatar-big avatar-t${p.team}">${isImg(p.icon) ? `<img src="${p.icon}">` : p.icon}</div>
@@ -483,17 +490,13 @@ function renderRightPanel() {
 
   document.getElementById('rp-ask').classList.toggle('hidden',   mode !== 'ask');
   document.getElementById('rp-claim').classList.toggle('hidden', mode !== 'claim');
-  document.getElementById('rp-award').classList.toggle('hidden', mode !== 'claim'); // show award below claim
 
-  // Update tab active state
   document.getElementById('rp-tab-ask').classList.toggle('active',   mode === 'ask');
   document.getElementById('rp-tab-claim').classList.toggle('active', mode === 'claim');
 
   if (mode === 'ask')   renderAskPanel();
   if (mode === 'claim') renderClaimPanel();
   if (state.scoreOverlayOpen) renderScoreOverlay();
-  // Always keep award list current for admins
-  renderPanelSuits();
 }
 
 function renderAskPanel() {
@@ -590,15 +593,19 @@ function renderClaimPanel() {
         const red = cardRed(card); const rank = cardRank(card); const suit = cardSuit(card);
         const assignedId = state.claimAssignments[card];
         const assignedPlayer = assignedId && room.players.find(p => p.id === assignedId);
-        const btnLabel = assignedPlayer ? assignedPlayer.name : 'select…';
+        const isSelCard = state.claimSelectedCard === card;
+        const btnLabel = assignedPlayer
+          ? (isImg(assignedPlayer.icon) ? '' : assignedPlayer.icon) + ' ' + assignedPlayer.name
+          : (isSelCard ? '← click player' : 'select…');
         return `<div class="claim-card-cell">
-          <div class="card-face ${red?'red':'black'}">
+          <div class="card-face ${red?'red':'black'} ${isSelCard?'claim-selected':''}"
+            style="cursor:pointer" onclick="selectClaimCard('${card}')">
             <div class="rank-top">${rank}<span class="suit-small">${suit}</span></div>
             <div class="suit-center">${suit}</div>
             <div class="rank-bottom">${rank}</div>
           </div>
-          <button class="claim-player-btn ${assignedPlayer?'assigned':''}"
-            onclick="cycleClaimPlayer('${card}')">${btnLabel}</button>
+          <button class="claim-player-btn ${assignedPlayer?'assigned':''} ${isSelCard&&!assignedPlayer?'waiting':''}"
+            onclick="selectClaimCard('${card}')">${btnLabel}</button>
         </div>`;
       }).join('');
       html += `</div>`;
@@ -635,14 +642,18 @@ function selectClaimTeam(team) {
   renderClaimPanel();
 }
 
-function cycleClaimPlayer(card) {
-  const room = state.room; if (!room) return;
-  const players = room.players;
-  const currentId = state.claimAssignments[card];
-  const idx = players.findIndex(p => p.id === currentId);
-  const next = players[(idx + 1) % players.length];
-  state.claimAssignments[card] = next.id;
+function selectClaimCard(card) {
+  state.claimSelectedCard = state.claimSelectedCard === card ? null : card;
   renderClaimPanel();
+  renderOvalPlayers(); // highlight all players as clickable targets
+}
+
+function assignClaimPlayer(playerId) {
+  if (!state.claimSelectedCard) return;
+  state.claimAssignments[state.claimSelectedCard] = playerId;
+  state.claimSelectedCard = null;
+  renderClaimPanel();
+  renderOvalPlayers();
 }
 
 function submitClaim() {
@@ -799,7 +810,7 @@ function showEventOverlay({ askerId, askerName, targetId, targetName, card, hadC
 function selectCard(card) {
   state.selectedCard = state.selectedCard === card ? null : card;
   if (!state.selectedCard) state.selectedTarget = null;
-  renderHand(); renderOvalPlayers(); renderActionStrip();
+  renderHand(); renderOvalPlayers(); renderActionStrip(); renderAskPanel();
 }
 
 function selectTarget(playerId) {
@@ -836,6 +847,11 @@ function handleTurnChange(room) {
   if (room.currentTurn === socket.id) {
     state.askSuit = null;
     state.rightPanelMode = 'ask';
+    // Auto-close score overlay when my turn starts
+    if (state.scoreOverlayOpen) {
+      state.scoreOverlayOpen = false;
+      document.getElementById('score-overlay').classList.add('hidden');
+    }
   }
 }
 
