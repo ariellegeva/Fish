@@ -169,6 +169,8 @@ io.on('connection', (socket) => {
       return cb({ ok: false, error: 'Game already started' });
     }
     if (room.players.length >= room.settings.numPlayers) return cb({ ok: false, error: 'Room full' });
+    if (room.players.find(p => p.name.toLowerCase() === name.toLowerCase()))
+      return cb({ ok: false, error: 'That name is already taken — choose another.' });
 
     let assignedTeam = team;
     if (!room.settings.teamSelection) {
