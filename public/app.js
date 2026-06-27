@@ -774,32 +774,25 @@ function showEventOverlay({ askerId, askerName, targetId, targetName, card, hadC
   overlay.classList.remove('hidden');
   overlay.classList.add('show');
 
-  // Phase 2: result after 1.4s
+  // Phase 2: show result after 1.4s — stays until next question
   eventOverlayTimer = setTimeout(() => {
     if (hadCard) {
       box.classList.add('got-it');
-      msgEl.textContent = `✓ ${targetLabel} had the ${card}!`;
+      msgEl.textContent = `✓ ${targetLabel} had the ${card}`;
       symEl.textContent = '!';
-      // Flip animation on target's stack
       const stackEl = document.getElementById(`stack-${targetId}`);
       if (stackEl) {
         stackEl.classList.remove('card-flip-anim');
-        void stackEl.offsetWidth; // reflow to restart
+        void stackEl.offsetWidth;
         stackEl.classList.add('card-flip-anim');
       }
     } else {
       box.classList.add('no-card');
-      msgEl.textContent = `✗ ${targetLabel} doesn't have it`;
+      msgEl.textContent = `✗ ${targetLabel} doesn't have the ${card}`;
       symEl.textContent = '✕';
     }
-
-    // Phase 3: dismiss after 2.2s
-    eventOverlayTimer = setTimeout(() => {
-      overlay.classList.add('hidden');
-      overlay.classList.remove('show');
-      box.className = '';
-      eventOverlayTimer = null;
-    }, 2200);
+    eventOverlayTimer = null;
+    // Overlay stays visible until next ask_result clears it
   }, 1400);
 }
 

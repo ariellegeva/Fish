@@ -654,24 +654,23 @@ label { display: block; font-size: 13px; color: var(--text-muted); margin-bottom
 }
 #score-corner-btn:hover { background: rgba(50,50,50,.9); color: #fff; }
 
-/* Turn banner — centered in table */
+/* Turn banner — top-left */
 #turn-banner-v2 {
   position: absolute;
-  top: 50%; left: 50%;
-  transform: translate(-50%, -50%);
-  background: rgba(45,45,45,.85);
+  top: 12px; left: 12px;
+  background: rgba(100,100,100,.82);
   color: #fff;
-  padding: 8px 24px;
+  padding: 8px 20px;
   border-radius: 24px;
-  font-size: 15px; font-weight: 800;
-  letter-spacing: .03em;
+  font-size: 14px; font-weight: 800;
+  letter-spacing: .02em;
   z-index: 20;
   white-space: nowrap;
   display: none;
   pointer-events: none;
 }
 #turn-banner-v2.mine  { background: rgba(76,175,110,.92); }
-#turn-banner-v2.other { background: rgba(45,45,45,.82); }
+#turn-banner-v2.other { background: rgba(80,80,80,.8); color: #ccc; }
 #turn-banner-v2.show  { display: block; }
 
 /* Player tiles on the oval */
