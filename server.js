@@ -291,6 +291,13 @@ io.on('connection', (socket) => {
       if (!claimedPlayer || claimedPlayer.id !== actualHolder.id) allCorrect = false;
     }
 
+    // Capture who held which cards BEFORE removing them
+    const cardsByPlayer = [];
+    for (const p of room.players) {
+      const held = hs.cards.filter(c => p.hand.includes(c));
+      if (held.length > 0) cardsByPlayer.push({ playerId: p.id, playerName: p.name, playerIcon: p.icon, team: p.team, cards: held });
+    }
+
     // Remove all cards in this suit from hands
     room.players.forEach(p => { p.hand = p.hand.filter(c => !hs.cards.includes(c)); });
     room.players.forEach(p => io.to(p.id).emit('your_hand', p.hand));
@@ -313,6 +320,13 @@ io.on('connection', (socket) => {
     }
     room.claimedSuits.push({ id: hs.id, name: hs.name + hs.suit, winner });
     checkGameEnd(room);
+
+    io.to(code).emit('claim_result', {
+      claimerName: claimer.name,
+      suitName: hs.name, suitSym: hs.suit,
+      result, winner, cardsByPlayer,
+    });
+
     io.to(code).emit('room_update', publicRoom(room));
     cb({ ok: true, result });
   });

@@ -98,7 +98,8 @@ function initSocket() {
     document.getElementById('exit-modal').classList.remove('hidden');
   });
 
-  socket.on('ask_result', (data) => showEventOverlay(data));
+  socket.on('ask_result',   (data) => showEventOverlay(data));
+  socket.on('claim_result', (data) => showClaimResultOverlay(data));
 }
 
 function checkRestore() {
@@ -665,13 +666,9 @@ function submitClaim() {
     assignments: state.claimAssignments,
   }, (res) => {
     if (!res.ok) return alert(res.error || 'Could not submit claim');
-    const msgs = {
-      correct: '✅ Correct claim!',
-      wrong_positions: '⚠️ Right team but wrong positions — suit goes to the middle.',
-      wrong_team: '❌ Wrong team — the other team gets the suit.',
-    };
-    alert(msgs[res.result] || 'Claim submitted.');
+    // Result is shown via claim_result socket event — no alert needed
     state.claimSuit = null; state.claimTeam = null; state.claimAssignments = {};
+    state.claimSelectedCard = null;
     renderClaimPanel();
   });
 }
@@ -804,6 +801,78 @@ function showEventOverlay({ askerId, askerName, targetId, targetName, card, hadC
       eventOverlayTimer = null;
     }, 2200);
   }, 1400);
+}
+
+// ===================== CLAIM RESULT OVERLAY =====================
+function showClaimResultOverlay({ claimerName, suitName, suitSym, result, cardsByPlayer }) {
+  if (eventOverlayTimer) { clearTimeout(eventOverlayTimer); eventOverlayTimer = null; }
+
+  const colors = {
+    correct:         { bg: '#5aba78', border: '#2d7040', label: 'Correct!' },
+    wrong_positions: { bg: '#d4b44a', border: '#8a7020', label: 'Right team, wrong positions — middle' },
+    wrong_team:      { bg: '#d97060', border: '#8a3020', label: 'Wrong team!' },
+  };
+  const c = colors[result] || colors.correct;
+
+  const overlay  = document.getElementById('event-overlay');
+  const box      = document.getElementById('event-box');
+  const cardEl   = document.getElementById('event-card-el');
+  const names    = document.getElementById('event-names');
+  const msgEl    = document.getElementById('event-msg');
+  const symEl    = document.getElementById('event-sym');
+
+  // Repurpose the overlay for a wider claim layout
+  box.className = '';
+  box.style.flexDirection = 'column';
+  box.style.background    = c.bg;
+  box.style.borderColor   = c.border;
+  box.style.width         = 'min(720px, 92%)';
+  box.style.gap           = '14px';
+
+  cardEl.innerHTML = '';
+  symEl.innerHTML  = '';
+  names.style.display = 'none';
+
+  msgEl.style.fontSize   = '20px';
+  msgEl.style.fontWeight = '900';
+  msgEl.style.color      = '#fff';
+  msgEl.textContent = `${claimerName} claimed ${suitName}${suitSym} — ${c.label}`;
+
+  // Player cards grid
+  const grid = document.createElement('div');
+  grid.style.cssText = 'display:flex;gap:16px;flex-wrap:wrap;justify-content:center;';
+  cardsByPlayer.forEach(({ playerName, playerIcon, cards }) => {
+    const cell = document.createElement('div');
+    cell.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:6px;';
+    const avatarEl = document.createElement('div');
+    avatarEl.style.cssText = 'font-size:26px;';
+    avatarEl.textContent = isImg(playerIcon) ? '' : playerIcon;
+    const nameEl = document.createElement('div');
+    nameEl.style.cssText = 'color:rgba(255,255,255,.85);font-size:12px;font-weight:800;font-family:Nunito,sans-serif;';
+    nameEl.textContent = playerName;
+    const cardsRow = document.createElement('div');
+    cardsRow.style.cssText = 'display:flex;gap:5px;';
+    cards.forEach(card => { cardsRow.innerHTML += buildCardFaceHTML(card, 'sm'); });
+    cell.appendChild(avatarEl);
+    cell.appendChild(nameEl);
+    cell.appendChild(cardsRow);
+    grid.appendChild(cell);
+  });
+  msgEl.after(grid);
+
+  overlay.classList.remove('hidden');
+  overlay.classList.add('show');
+
+  eventOverlayTimer = setTimeout(() => {
+    overlay.classList.add('hidden');
+    overlay.classList.remove('show');
+    // Reset box styles
+    box.style.cssText = '';
+    names.style.display = '';
+    msgEl.style.cssText = '';
+    grid.remove();
+    eventOverlayTimer = null;
+  }, 4000);
 }
 
 // ===================== CARD ACTIONS =====================
