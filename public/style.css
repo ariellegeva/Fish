@@ -301,9 +301,11 @@ label { display: block; font-size: 13px; color: var(--text-muted); margin-bottom
   justify-content: center;
   z-index: 40;
   padding: 16px;
-  pointer-events: none;
+  pointer-events: none; /* always passthrough — only the box itself catches clicks */
 }
-#event-overlay.show { pointer-events: auto; }
+#event-box {
+  pointer-events: auto;
+}
 
 #event-box {
   display: flex;
