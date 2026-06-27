@@ -18,6 +18,8 @@
   --accent2: #3fb950;
   --team1: #3a6bc4;
   --team2: #c0392b;
+  --team1-bg: #b8d4f0;
+  --team2-bg: #f5b8c8;
   --radius: 12px;
   --shadow: 0 4px 20px rgba(0,0,0,.2);
 }
@@ -446,6 +448,9 @@ label { display: block; font-size: 13px; color: var(--text-muted); margin-bottom
 .won-suit-badge.mid { background: rgba(100,90,80,.2); color: #8a7a6a; border: 1px solid rgba(100,90,80,.3); }
 
 /* ===== LOBBY / SETTINGS / RULES (non-game pages) ===== */
+.avatar-t1 { background: var(--team1-bg) !important; }
+.avatar-t2 { background: var(--team2-bg) !important; }
+
 .player-card {
   display: flex; align-items: center; gap: 12px;
   padding: 12px; border-radius: 10px;
@@ -455,7 +460,7 @@ label { display: block; font-size: 13px; color: var(--text-muted); margin-bottom
 .player-avatar {
   width: 40px; height: 40px; border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
-  font-size: 20px; background: var(--bg);
+  font-size: 20px; background: var(--team1-bg);
   border: 2px solid var(--border); flex-shrink: 0; overflow: hidden;
 }
 .player-avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }

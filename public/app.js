@@ -60,7 +60,15 @@ function initSocket() {
   socket.on('connect', () => { state.myId = socket.id; });
 
   socket.on('room_update', (room) => {
+    const wasPlaying = state.room && state.room.phase === 'playing';
     state.room = room;
+    // Auto-navigate everyone to game tab when game starts
+    if (!wasPlaying && room.phase === 'playing') {
+      document.getElementById('nav').classList.remove('hidden');
+      updateNav();
+      showTab('game');
+      return;
+    }
     renderAll();
   });
 
@@ -277,7 +285,7 @@ function renderLobby() {
     needed > 0 ? `Waiting for ${needed} more player${needed!==1?'s':''}...` : 'All players present!';
   document.getElementById('lobby-player-list').innerHTML = room.players.map(p => `
     <div class="player-card ${p.connected?'':'disconnected'}">
-      <div class="player-avatar">${isImg(p.icon)?`<img src="${p.icon}">`:`${p.icon}`}</div>
+      <div class="player-avatar avatar-t${p.team}">${isImg(p.icon)?`<img src="${p.icon}">`:`${p.icon}`}</div>
       <div class="player-info">
         <div class="player-name">${p.name} ${p.id===room.adminId?'👑':''}</div>
         <div class="player-meta">${p.connected?'Online':'Disconnected'}</div>
@@ -373,7 +381,7 @@ function renderOvalPlayers() {
       : `<div style="height:30px;font-size:11px;color:#9a8a7a;font-weight:700;padding-top:8px">no cards</div>`;
 
     tile.innerHTML = `
-      <div class="player-avatar-big">${isImg(p.icon)?`<img src="${p.icon}">`:`${p.icon}`}</div>
+      <div class="player-avatar-big avatar-t${p.team}">${isImg(p.icon)?`<img src="${p.icon}">`:`${p.icon}`}</div>
       <div class="player-oval-name">${p.name}${p.id===room.adminId?' 👑':''}${isMe?' (you)':''}</div>
       <span class="player-oval-team t${p.team}">T${p.team}</span>
       ${stackHTML}`;
