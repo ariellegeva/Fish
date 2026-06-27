@@ -636,6 +636,17 @@ function renderClaimPanel() {
 function selectClaimSuit(id) {
   state.claimSuit = state.claimSuit === id ? null : id;
   state.claimAssignments = {};
+  // Auto-assign cards the current player holds in this suit
+  if (state.claimSuit) {
+    const hs = HALF_SUITS.find(h => h.id === state.claimSuit);
+    if (hs) {
+      hs.cards.forEach(card => {
+        if (state.myHand.includes(card)) {
+          state.claimAssignments[card] = socket.id;
+        }
+      });
+    }
+  }
   renderClaimPanel();
 }
 
