@@ -514,13 +514,39 @@ function renderAskPanel() {
     return;
   }
 
-  list.innerHTML = askable.map(hs => {
+  // Suit buttons
+  let html = askable.map(hs => {
     const sel = state.askSuit === hs.id;
     return `<button class="ask-suit-btn ${sel ? 'selected' : ''}" onclick="selectAskSuit('${hs.id}')">
       <span>${hs.name}</span>
       <span class="suit-sym ${hs.red ? 'red' : 'black'}">${hs.suit}</span>
     </button>`;
   }).join('');
+
+  // Card picker — shown after a suit is selected
+  if (state.askSuit) {
+    const hs = HALF_SUITS.find(h => h.id === state.askSuit);
+    if (hs) {
+      // Cards in this suit the player does NOT hold (these are what they can ask for)
+      const askableCards = hs.cards.filter(c => !state.myHand.includes(c));
+      if (askableCards.length > 0) {
+        html += `<div class="ask-card-divider">Pick a card to ask for</div>`;
+        html += `<div class="ask-card-grid">` + askableCards.map(card => {
+          const red = cardRed(card);
+          const rank = cardRank(card);
+          const suit = cardSuit(card);
+          const sel = state.selectedCard === card;
+          return `<button class="ask-card-pick ${sel ? 'selected' : ''} ${red ? 'red' : 'black'}"
+            onclick="selectCard('${card}')">
+            <span class="acp-rank">${rank}</span>
+            <span class="acp-suit">${suit}</span>
+          </button>`;
+        }).join('') + `</div>`;
+      }
+    }
+  }
+
+  list.innerHTML = html;
 }
 
 function selectAskSuit(id) {
