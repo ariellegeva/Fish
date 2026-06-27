@@ -301,6 +301,23 @@ io.on('connection', (socket) => {
     io.to(code).emit('chat_message', { name: player.name, icon: player.icon, text, ts: Date.now() });
   });
 
+  // --- Exit game ---
+  socket.on('exit_game', (_, cb) => {
+    const { code } = socket.data || {};
+    const room = rooms[code];
+    if (!room) return cb && cb({ ok: true });
+    const player = room.players.find(p => p.id === socket.id);
+    if (player) {
+      addLog(room, `${player.name} exited the game.`);
+      io.to(code).emit('player_exited', { name: player.name, icon: player.icon });
+      room.players = room.players.filter(p => p.id !== socket.id);
+      io.to(code).emit('room_update', publicRoom(room));
+    }
+    socket.leave(code);
+    socket.data = {};
+    cb && cb({ ok: true });
+  });
+
   // --- Update settings (admin only) ---
   socket.on('update_settings', (newSettings, cb) => {
     const { code } = socket.data || {};

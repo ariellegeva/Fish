@@ -81,6 +81,11 @@ function initSocket() {
   });
 
   socket.on('chat_message', (msg) => appendChat(msg));
+
+  socket.on('player_exited', ({ name }) => {
+    document.getElementById('exit-modal-text').textContent = `${name} exited the game.`;
+    document.getElementById('exit-modal').classList.remove('hidden');
+  });
 }
 
 function checkRestore() {
@@ -629,6 +634,27 @@ function appendChat(msg) {
     <div class="chat-icon">${isImg(msg.icon)?`<img src="${msg.icon}" style="width:28px;height:28px;border-radius:50%;object-fit:cover">`:msg.icon}</div>
     <div class="chat-bubble"><div class="chat-sender">${msg.name}</div>${escHtml(msg.text)}</div>`;
   box.appendChild(d); box.scrollTop = box.scrollHeight;
+}
+
+// ===================== EXIT =====================
+function exitGame() {
+  if (!confirm('Are you sure you want to exit the game?')) return;
+  socket.emit('exit_game', {}, () => { goHome(); });
+}
+
+function goHome() {
+  localStorage.removeItem('fish_session');
+  state.room = null;
+  state.myHand = [];
+  state.inCreateFlow = false;
+  state.selectedCard = null;
+  state.selectedTarget = null;
+  state.panelCards = [];
+  state.scorePanelOpen = false;
+  document.getElementById('exit-modal').classList.add('hidden');
+  document.getElementById('score-panel').classList.add('hidden');
+  document.getElementById('nav').classList.add('hidden');
+  showPage('landing');
 }
 
 // ===================== UTILS =====================

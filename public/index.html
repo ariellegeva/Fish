@@ -179,6 +179,18 @@
   <span class="nav-item" onclick="showTab('settings')" id="nav-settings">Settings</span>
   <span class="nav-item" onclick="showTab('rules')" id="nav-rules">Rules</span>
   <span class="nav-item" id="nav-chat" onclick="showTab('chat')" style="display:none">Chat</span>
+  <span style="flex:1"></span>
+  <span class="nav-item" onclick="exitGame()" style="color:#c07070" id="nav-exit">Exit</span>
+</div>
+
+<!-- ==================== EXIT NOTICE MODAL ==================== -->
+<div id="exit-modal" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:200">
+  <div style="background:#fff;border:2.5px solid #2d2d2d;border-radius:14px;padding:32px;max-width:360px;width:90%;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,.3)">
+    <div style="font-size:48px;margin-bottom:12px">🚪</div>
+    <h3 id="exit-modal-text" style="font-family:'Nunito',sans-serif;font-size:18px;font-weight:800;color:#2d2d2d;margin-bottom:8px"></h3>
+    <p style="font-size:14px;color:#7a6a5a;font-weight:600;margin-bottom:24px">The game has ended.</p>
+    <button onclick="goHome()" style="width:100%;font-size:15px;padding:12px;font-family:'Nunito',sans-serif">Back to home</button>
+  </div>
 </div>
 
 <!-- ==================== LOBBY TAB ==================== -->
