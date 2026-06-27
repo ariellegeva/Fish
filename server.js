@@ -13,14 +13,14 @@ app.use(express.static(path.join(__dirname, 'public')));
 const rooms = {}; // code -> room
 
 const HALF_SUITS = [
-  { id: 'low_hearts',   name: 'Low ♥',   cards: ['2♥','3♥','4♥','5♥','6♥','7♥'] },
-  { id: 'high_hearts',  name: 'High ♥',  cards: ['9♥','10♥','J♥','Q♥','K♥','A♥'] },
-  { id: 'low_clubs',    name: 'Low ♣',   cards: ['2♣','3♣','4♣','5♣','6♣','7♣'] },
-  { id: 'high_clubs',   name: 'High ♣',  cards: ['9♣','10♣','J♣','Q♣','K♣','A♣'] },
-  { id: 'low_diamonds', name: 'Low ♦',   cards: ['2♦','3♦','4♦','5♦','6♦','7♦'] },
-  { id: 'high_diamonds',name: 'High ♦',  cards: ['9♦','10♦','J♦','Q♦','K♦','A♦'] },
-  { id: 'low_spades',   name: 'Low ♠',   cards: ['2♠','3♠','4♠','5♠','6♠','7♠'] },
-  { id: 'high_spades',  name: 'High ♠',  cards: ['9♠','10♠','J♠','Q♠','K♠','A♠'] },
+  { id: 'low_hearts',   name: 'Low',  suit: '♥', cards: ['2♥','3♥','4♥','5♥','6♥','7♥'] },
+  { id: 'high_hearts',  name: 'High', suit: '♥', cards: ['9♥','10♥','J♥','Q♥','K♥','A♥'] },
+  { id: 'low_clubs',    name: 'Low',  suit: '♣', cards: ['2♣','3♣','4♣','5♣','6♣','7♣'] },
+  { id: 'high_clubs',   name: 'High', suit: '♣', cards: ['9♣','10♣','J♣','Q♣','K♣','A♣'] },
+  { id: 'low_diamonds', name: 'Low',  suit: '♦', cards: ['2♦','3♦','4♦','5♦','6♦','7♦'] },
+  { id: 'high_diamonds',name: 'High', suit: '♦', cards: ['9♦','10♦','J♦','Q♦','K♦','A♦'] },
+  { id: 'low_spades',   name: 'Low',  suit: '♠', cards: ['2♠','3♠','4♠','5♠','6♠','7♠'] },
+  { id: 'high_spades',  name: 'High', suit: '♠', cards: ['9♠','10♠','J♠','Q♠','K♠','A♠'] },
 ];
 
 function cardToHalfSuit(card) {
@@ -265,6 +265,56 @@ io.on('connection', (socket) => {
     nextTurn(room, toPlayerId);
     io.to(code).emit('room_update', publicRoom(room));
     cb({ ok: true });
+  });
+
+  // --- Claim suit (digital claim with card-player assignments) ---
+  socket.on('claim_suit', ({ halfSuitId, claimedForTeam, assignments }, cb) => {
+    const { code } = socket.data || {};
+    const room = rooms[code];
+    if (!room || room.phase !== 'playing') return cb({ ok: false, error: 'Not in game' });
+
+    const claimer = room.players.find(p => p.id === socket.id);
+    const hs = HALF_SUITS.find(h => h.id === halfSuitId);
+    if (!hs) return cb({ ok: false, error: 'Invalid suit' });
+    if (room.claimedSuits.find(s => s.id === halfSuitId)) return cb({ ok: false, error: 'Already claimed' });
+
+    const currentPlayer = room.players.find(p => p.id === room.currentTurn);
+    if (!currentPlayer || currentPlayer.team !== claimer.team)
+      return cb({ ok: false, error: "Can only claim on your team's turn" });
+
+    let wrongTeam = false, allCorrect = true;
+    for (const card of hs.cards) {
+      const actualHolder = room.players.find(p => p.hand.includes(card));
+      if (!actualHolder) { allCorrect = false; continue; }
+      if (actualHolder.team !== claimedForTeam) wrongTeam = true;
+      const claimedPlayer = room.players.find(p => p.id === assignments[card]);
+      if (!claimedPlayer || claimedPlayer.id !== actualHolder.id) allCorrect = false;
+    }
+
+    // Remove all cards in this suit from hands
+    room.players.forEach(p => { p.hand = p.hand.filter(c => !hs.cards.includes(c)); });
+    room.players.forEach(p => io.to(p.id).emit('your_hand', p.hand));
+
+    let result, winner;
+    if (wrongTeam) {
+      winner = claimedForTeam === 1 ? 2 : 1;
+      room.scores[`team${winner}`]++;
+      result = 'wrong_team';
+      addLog(room, `${claimer.name} claimed ${hs.name}${hs.suit} for Team ${claimedForTeam} — WRONG! Team ${winner} gets it.`);
+    } else if (!allCorrect) {
+      winner = 0;
+      result = 'wrong_positions';
+      addLog(room, `${claimer.name} claimed ${hs.name}${hs.suit} — right team, wrong positions. Goes to middle.`);
+    } else {
+      winner = claimedForTeam;
+      room.scores[`team${winner}`]++;
+      result = 'correct';
+      addLog(room, `${claimer.name} correctly claimed ${hs.name}${hs.suit} for Team ${winner}!`);
+    }
+    room.claimedSuits.push({ id: hs.id, name: hs.name + hs.suit, winner });
+    checkGameEnd(room);
+    io.to(code).emit('room_update', publicRoom(room));
+    cb({ ok: true, result });
   });
 
   // --- Award suit (admin manually records claim result after phone call) ---

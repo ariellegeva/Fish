@@ -220,6 +220,31 @@
       <div id="turn-banner-v2"></div>
       <div id="oval-players"></div>
 
+      <!-- Score overlay (floating over game table) -->
+      <div id="score-overlay" class="hidden">
+        <div id="score-overlay-box">
+          <div class="so-header">
+            <span class="so-title">SCORE</span>
+            <button onclick="toggleScoreOverlay()" style="background:transparent;border:1px solid #5a4a3a;color:#8a7a6a;padding:3px 10px;font-size:11px;border-radius:6px">✕</button>
+          </div>
+          <div class="so-body">
+            <div class="so-team-section">
+              <div class="so-team-label t1">TEAM 1</div>
+              <div class="so-suits" id="so-suits-t1"></div>
+            </div>
+            <div class="so-scores">
+              <div class="so-score-box t1"><div class="so-score-num" id="so-score-t1">0</div><div class="so-score-lbl">TEAM 1</div></div>
+              <div class="so-score-box mid"><div class="so-score-num" id="so-score-mid">0</div><div class="so-score-lbl">MID</div></div>
+              <div class="so-score-box t2"><div class="so-score-num" id="so-score-t2">0</div><div class="so-score-lbl">TEAM 2</div></div>
+            </div>
+            <div class="so-team-section">
+              <div class="so-team-label t2">TEAM 2</div>
+              <div class="so-suits" id="so-suits-t2"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Ask/result event overlay (shown center-table for all players) -->
       <div id="event-overlay" class="hidden">
         <div id="event-box">
@@ -256,42 +281,31 @@
 
   </div>
 
-  <!-- Right panel: ASK (my turn) or SCORE (always accessible) -->
+  <!-- Right panel: ASK / Claim tabs -->
   <div id="right-panel">
+
+    <!-- Tab bar -->
+    <div class="rp-tabs-bar">
+      <button class="rp-tab" id="rp-tab-ask"   onclick="showRightPanel('ask')">ASK</button>
+      <button class="rp-tab" id="rp-tab-claim" onclick="showRightPanel('claim')">claim</button>
+      <button class="rp-score-btn" onclick="toggleScoreOverlay()">Score ▸</button>
+    </div>
 
     <!-- ASK mode -->
     <div id="rp-ask" class="hidden">
-      <div class="rp-header">
-        <span class="rp-title">ASK</span>
-        <button class="rp-tab-btn" onclick="showRightPanel('score')">Score ▸</button>
-      </div>
       <div class="rp-hint">Pick a half-suit you hold, then a card, then a player</div>
       <div id="ask-suit-list"></div>
     </div>
 
-    <!-- SCORE mode -->
-    <div id="rp-score" class="hidden">
-      <div class="rp-header">
-        <span class="rp-title">SCORE</span>
-        <button class="rp-tab-btn" id="rp-back-ask" onclick="showRightPanel('ask')" style="display:none">◂ Ask</button>
-      </div>
-      <div class="panel-section">
-        <div class="team-score-row">
-          <div class="team-score-box t1"><div class="tsb-label">Team 1</div><div class="tsb-num" id="panel-score-t1">0</div></div>
-          <div class="team-score-box mid"><div class="tsb-label">Mid</div><div class="tsb-num" id="panel-score-mid">0</div></div>
-          <div class="team-score-box t2"><div class="tsb-label">Team 2</div><div class="tsb-num" id="panel-score-t2">0</div></div>
-        </div>
-        <div class="panel-section-label" style="margin-top:10px">Team 1</div>
-        <div class="won-suits" id="won-t1"></div>
-        <div class="panel-section-label" style="margin-top:8px">Team 2</div>
-        <div class="won-suits" id="won-t2"></div>
-      </div>
-      <div class="panel-section">
-        <div class="panel-section-label">Selected cards</div>
-        <div id="panel-tray"><span id="panel-tray-hint">Click cards in your hand</span></div>
-        <button class="secondary" style="margin-top:8px;width:100%;font-size:12px;padding:6px" onclick="clearSelectedCards()">Clear</button>
-      </div>
-      <div class="panel-section-label" style="padding:10px 16px 6px">Award half suits</div>
+    <!-- CLAIM mode -->
+    <div id="rp-claim" class="hidden">
+      <div class="rp-hint">Pick a suit, assign each card to a player, select the team</div>
+      <div id="claim-suit-list"></div>
+    </div>
+
+    <!-- Award suits (admin fallback) -->
+    <div id="rp-award" class="hidden">
+      <div class="panel-section-label" style="padding:10px 16px 6px">Admin: award suits</div>
       <div class="panel-suit-list" id="panel-suits-list"></div>
     </div>
 

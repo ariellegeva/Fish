@@ -350,6 +350,49 @@ label { display: block; font-size: 13px; color: var(--text-muted); margin-bottom
 }
 .card-flip-anim .card-back { animation: card-flip .7s ease-in-out; }
 
+/* ===== SCORE OVERLAY ===== */
+#score-overlay {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 35;
+  width: min(440px, 88%);
+}
+#score-overlay-box {
+  background: #1e1e1e;
+  border: 2px solid #3a3a3a;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 12px 40px rgba(0,0,0,.5);
+  font-family: 'Nunito', sans-serif;
+}
+.so-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 18px 10px;
+  border-bottom: 1px solid #2d2d2d;
+}
+.so-title { font-size: 22px; font-weight: 900; color: #fff; letter-spacing: .1em; }
+.so-body { padding: 14px 18px; display: flex; flex-direction: column; gap: 10px; }
+.so-team-section {}
+.so-team-label { font-size: 11px; font-weight: 800; letter-spacing: .1em; margin-bottom: 6px; }
+.so-team-label.t1 { color: #7aafff; }
+.so-team-label.t2 { color: #ff8a7a; }
+.so-suits { display: flex; flex-wrap: wrap; gap: 5px; min-height: 22px; }
+.so-suit-badge {
+  font-size: 12px; font-weight: 800; padding: 3px 10px;
+  border-radius: 20px; font-family: 'Nunito', sans-serif;
+}
+.so-suit-badge.t1  { background: rgba(58,107,196,.25); color: #7aafff; border: 1px solid rgba(58,107,196,.4); }
+.so-suit-badge.t2  { background: rgba(192,57,43,.2);  color: #ff8a7a; border: 1px solid rgba(192,57,43,.35); }
+.so-suit-badge.mid { background: rgba(100,90,80,.25); color: #8a7a6a; border: 1px solid rgba(100,90,80,.3); }
+.so-scores { display: flex; gap: 8px; }
+.so-score-box { flex: 1; text-align: center; background: #2d2d2d; border-radius: 10px; padding: 10px 8px; }
+.so-score-num { font-size: 30px; font-weight: 900; line-height: 1; }
+.so-score-lbl { font-size: 9px; font-weight: 800; color: #6a5a4a; letter-spacing: .08em; margin-top: 3px; }
+.so-score-box.t1 .so-score-num { color: #7aafff; }
+.so-score-box.t2 .so-score-num { color: #ff8a7a; }
+.so-score-box.mid .so-score-num { color: #8a7a6a; font-size: 22px; }
+
 /* ===== RIGHT PANEL ===== */
 #right-panel {
   width: 260px;
@@ -361,44 +404,136 @@ label { display: block; font-size: 13px; color: var(--text-muted); margin-bottom
   overflow: hidden;
 }
 
-#rp-ask, #rp-score { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
-
-.rp-header {
+/* Tab bar */
+.rp-tabs-bar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 16px 16px 12px;
+  gap: 0;
+  padding: 12px 12px 0;
   border-bottom: 1px solid var(--dark2);
   flex-shrink: 0;
 }
-.rp-title {
-  font-size: 28px;
-  font-weight: 900;
-  color: #fff;
-  letter-spacing: .06em;
-  font-family: 'Nunito', sans-serif;
-}
-.rp-tab-btn {
+.rp-tab {
+  flex: 1;
   background: transparent;
-  border: 1px solid var(--dark3);
-  color: #8a7a6a;
-  padding: 4px 10px;
+  border: none;
+  border-bottom: 3px solid transparent;
+  color: #6a5a4a;
+  font-size: 18px;
+  font-weight: 900;
+  font-family: 'Nunito', sans-serif;
+  padding: 6px 4px 10px;
+  cursor: pointer;
+  transition: color .15s, border-color .15s;
+  letter-spacing: .04em;
+  text-align: left;
+}
+.rp-tab:hover { color: #c8b89a; }
+.rp-tab.active { color: #fff; border-bottom-color: #fff; }
+.rp-score-btn {
+  background: transparent;
+  border: 1px solid #3a3a3a;
+  color: #6a5a4a;
   font-size: 11px;
+  font-weight: 700;
+  font-family: 'Nunito', sans-serif;
+  padding: 4px 9px;
   border-radius: 6px;
   cursor: pointer;
-  font-family: 'Nunito', sans-serif;
-  font-weight: 700;
+  white-space: nowrap;
+  margin-left: 4px;
+  margin-bottom: 4px;
 }
-.rp-tab-btn:hover { color: #c8b89a; border-color: #6a5a4a; }
+.rp-score-btn:hover { color: #c8b89a; border-color: #6a5a4a; }
+
+#rp-ask, #rp-claim, #rp-award {
+  display: flex; flex-direction: column;
+  flex: 1; overflow-y: auto; overflow-x: hidden;
+}
 
 .rp-hint {
-  padding: 8px 16px;
+  padding: 8px 14px;
   font-size: 11px;
-  color: #6a5a4a;
+  color: #5a4a3a;
   font-weight: 600;
   font-family: 'Nunito', sans-serif;
   flex-shrink: 0;
 }
+
+/* ===== CLAIM PANEL ===== */
+#claim-suit-list {
+  overflow-y: auto;
+  flex: 1;
+  padding: 6px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Team selector in claim */
+.claim-team-row {
+  display: flex; gap: 8px; margin: 4px 0 8px;
+}
+.claim-team-btn {
+  flex: 1; padding: 12px 8px;
+  border-radius: 50px;
+  border: 2.5px solid #3a3a3a;
+  background: #2a2a2a;
+  color: #6a5a4a;
+  font-size: 13px; font-weight: 800;
+  font-family: 'Nunito', sans-serif;
+  cursor: pointer; transition: all .15s;
+  text-align: center;
+}
+.claim-team-btn.sel-t1 { background: rgba(58,107,196,.3); border-color: #3a6bc4; color: #7aafff; }
+.claim-team-btn.sel-t2 { background: rgba(192,57,43,.3);  border-color: #c0392b; color: #ff8a7a; }
+.claim-team-btn:not(.sel-t1):not(.sel-t2):hover { border-color: #6a5a4a; color: #c8b89a; }
+
+/* Card-player grid in claim */
+.claim-card-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.claim-card-cell {
+  display: flex; flex-direction: column; align-items: center; gap: 5px;
+}
+.claim-card-cell .card-face {
+  width: 52px; height: 72px;
+}
+.claim-player-btn {
+  width: 100%;
+  background: #2a2a2a;
+  border: 1.5px solid #3a3a3a;
+  border-radius: 8px;
+  color: #8a7a6a;
+  font-size: 10px; font-weight: 700;
+  font-family: 'Nunito', sans-serif;
+  padding: 4px 4px;
+  cursor: pointer;
+  text-align: center;
+  transition: all .12s;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.claim-player-btn.assigned { background: rgba(58,107,196,.25); border-color: #3a6bc4; color: #7aafff; }
+.claim-player-btn:hover { border-color: #6a5a4a; color: #c8b89a; }
+
+.claim-submit-btn {
+  width: calc(100% - 24px);
+  margin: 10px 12px;
+  padding: 12px;
+  background: #4caf6e;
+  border: 2px solid #2d6a40;
+  border-radius: 10px;
+  color: #fff;
+  font-size: 15px; font-weight: 900;
+  font-family: 'Nunito', sans-serif;
+  cursor: pointer;
+  box-shadow: 0 3px 0 #2d6a40;
+  flex-shrink: 0;
+}
+.claim-submit-btn:disabled { background: #3a3a3a; border-color: #3a3a3a; box-shadow: none; color: #5a4a3a; cursor: not-allowed; }
+.claim-submit-btn:not(:disabled):hover { transform: translateY(-1px); box-shadow: 0 4px 0 #2d6a40; }
 
 /* Suit buttons in ASK panel */
 #ask-suit-list {

@@ -32,12 +32,17 @@ let state = {
   myHand: [],
   myId: null,
   // asking state
-  askSuit: null,       // selected half-suit id in ASK panel
+  askSuit: null,
   selectedCard: null,
   selectedTarget: null,
-  // score/panel
+  // claim state
+  claimSuit: null,
+  claimTeam: null,
+  claimAssignments: {}, // card -> playerId
+  // panel
   panelCards: [],
-  rightPanelMode: 'ask', // 'ask' | 'score'
+  rightPanelMode: 'ask', // 'ask' | 'claim'
+  scoreOverlayOpen: false,
   inCreateFlow: false,
 };
 
@@ -417,8 +422,6 @@ function renderHand() {
 }
 
 function handleCardClick(card) {
-  if (state.rightPanelMode === 'score') { togglePanelCard(card); return; }
-  // In ask mode: only selectable if in the chosen suit (or no suit chosen yet)
   const suitCards = state.askSuit ? (HALF_SUITS.find(h => h.id === state.askSuit)?.cards || []) : null;
   if (suitCards && !suitCards.includes(card)) return;
   selectCard(card);
@@ -476,21 +479,21 @@ function showRightPanel(mode) {
 
 function renderRightPanel() {
   const room = state.room; if (!room) return;
-  const myTurn = room.currentTurn === socket.id && room.phase === 'playing';
-
-  // Auto-switch to ask panel when it's my turn (unless user manually chose score)
-  // Only auto-switch when it BECOMES my turn (handled in renderAll via room_update)
   const mode = state.rightPanelMode;
 
-  document.getElementById('rp-ask').classList.toggle('hidden', mode !== 'ask');
-  document.getElementById('rp-score').classList.toggle('hidden', mode !== 'score');
+  document.getElementById('rp-ask').classList.toggle('hidden',   mode !== 'ask');
+  document.getElementById('rp-claim').classList.toggle('hidden', mode !== 'claim');
+  document.getElementById('rp-award').classList.toggle('hidden', mode !== 'claim'); // show award below claim
 
-  // Show "◂ Ask" back button only if it's my turn and I'm viewing score
-  const backBtn = document.getElementById('rp-back-ask');
-  if (backBtn) backBtn.style.display = (myTurn && mode === 'score') ? '' : 'none';
+  // Update tab active state
+  document.getElementById('rp-tab-ask').classList.toggle('active',   mode === 'ask');
+  document.getElementById('rp-tab-claim').classList.toggle('active', mode === 'claim');
 
-  if (mode === 'ask') renderAskPanel();
-  else renderScorePanel();
+  if (mode === 'ask')   renderAskPanel();
+  if (mode === 'claim') renderClaimPanel();
+  if (state.scoreOverlayOpen) renderScoreOverlay();
+  // Always keep award list current for admins
+  renderPanelSuits();
 }
 
 function renderAskPanel() {
@@ -550,6 +553,118 @@ function renderAskPanel() {
   list.innerHTML = html;
 }
 
+// ===================== CLAIM PANEL =====================
+function renderClaimPanel() {
+  const room = state.room; if (!room) return;
+  const claimed = new Set(room.claimedSuits.map(s => s.id));
+  const list = document.getElementById('claim-suit-list');
+
+  const currentPlayer = room.players.find(p => p.id === room.currentTurn);
+  const me = room.players.find(p => p.id === socket.id);
+  const myTeamsTurn = currentPlayer && me && currentPlayer.team === me.team && room.phase === 'playing';
+
+  // Suit buttons
+  const claimableSuits = HALF_SUITS.filter(hs => !claimed.has(hs.id));
+  let html = claimableSuits.map(hs => {
+    const sel = state.claimSuit === hs.id;
+    return `<button class="ask-suit-btn ${sel ? 'selected' : ''}" onclick="selectClaimSuit('${hs.id}')">
+      <span>${hs.name}</span>
+      <span class="suit-sym ${hs.red ? 'red' : 'black'}">${hs.suit}</span>
+    </button>`;
+  }).join('');
+
+  if (state.claimSuit) {
+    const hs = HALF_SUITS.find(h => h.id === state.claimSuit);
+    if (hs) {
+      // Team selector
+      html += `<div class="ask-card-divider">Which team holds all the cards?</div>
+        <div class="claim-team-row">
+          <button class="claim-team-btn ${state.claimTeam===1?'sel-t1':''}" onclick="selectClaimTeam(1)">Team 1</button>
+          <button class="claim-team-btn ${state.claimTeam===2?'sel-t2':''}" onclick="selectClaimTeam(2)">Team 2</button>
+        </div>`;
+
+      // Card-player assignment grid
+      html += `<div class="ask-card-divider">Assign each card to a player</div>
+        <div class="claim-card-grid">`;
+      html += hs.cards.map(card => {
+        const red = cardRed(card); const rank = cardRank(card); const suit = cardSuit(card);
+        const assignedId = state.claimAssignments[card];
+        const assignedPlayer = assignedId && room.players.find(p => p.id === assignedId);
+        const btnLabel = assignedPlayer ? assignedPlayer.name : 'select…';
+        return `<div class="claim-card-cell">
+          <div class="card-face ${red?'red':'black'}">
+            <div class="rank-top">${rank}<span class="suit-small">${suit}</span></div>
+            <div class="suit-center">${suit}</div>
+            <div class="rank-bottom">${rank}</div>
+          </div>
+          <button class="claim-player-btn ${assignedPlayer?'assigned':''}"
+            onclick="cycleClaimPlayer('${card}')">${btnLabel}</button>
+        </div>`;
+      }).join('');
+      html += `</div>`;
+    }
+  }
+
+  list.innerHTML = html;
+
+  // Submit button (outside scroll, at bottom of panel)
+  let submitBtn = document.getElementById('claim-submit-btn');
+  if (!submitBtn) {
+    submitBtn = document.createElement('button');
+    submitBtn.id = 'claim-submit-btn';
+    submitBtn.className = 'claim-submit-btn';
+    submitBtn.textContent = 'Submit claim';
+    submitBtn.onclick = submitClaim;
+    document.getElementById('rp-claim').appendChild(submitBtn);
+  }
+  const allAssigned = state.claimSuit && state.claimTeam &&
+    HALF_SUITS.find(h => h.id === state.claimSuit)?.cards.every(c => state.claimAssignments[c]);
+  submitBtn.disabled = !allAssigned || !myTeamsTurn;
+  if (!myTeamsTurn) submitBtn.textContent = "Not your team's turn";
+  else submitBtn.textContent = 'Submit claim';
+}
+
+function selectClaimSuit(id) {
+  state.claimSuit = state.claimSuit === id ? null : id;
+  state.claimAssignments = {};
+  renderClaimPanel();
+}
+
+function selectClaimTeam(team) {
+  state.claimTeam = state.claimTeam === team ? null : team;
+  renderClaimPanel();
+}
+
+function cycleClaimPlayer(card) {
+  const room = state.room; if (!room) return;
+  const players = room.players;
+  const currentId = state.claimAssignments[card];
+  const idx = players.findIndex(p => p.id === currentId);
+  const next = players[(idx + 1) % players.length];
+  state.claimAssignments[card] = next.id;
+  renderClaimPanel();
+}
+
+function submitClaim() {
+  const room = state.room; if (!room) return;
+  if (!state.claimSuit || !state.claimTeam) return;
+  socket.emit('claim_suit', {
+    halfSuitId: state.claimSuit,
+    claimedForTeam: state.claimTeam,
+    assignments: state.claimAssignments,
+  }, (res) => {
+    if (!res.ok) return alert(res.error || 'Could not submit claim');
+    const msgs = {
+      correct: '✅ Correct claim!',
+      wrong_positions: '⚠️ Right team but wrong positions — suit goes to the middle.',
+      wrong_team: '❌ Wrong team — the other team gets the suit.',
+    };
+    alert(msgs[res.result] || 'Claim submitted.');
+    state.claimSuit = null; state.claimTeam = null; state.claimAssignments = {};
+    renderClaimPanel();
+  });
+}
+
 function selectAskSuit(id) {
   state.askSuit = state.askSuit === id ? null : id;
   // Clear card selection if it's no longer in the new suit
@@ -566,23 +681,6 @@ function selectAskSuit(id) {
   renderOvalPlayers();
 }
 
-// ===================== SCORE PANEL =====================
-function renderScorePanel() {
-  const room = state.room; if (!room) return;
-  document.getElementById('panel-score-t1').textContent = room.scores.team1;
-  document.getElementById('panel-score-t2').textContent = room.scores.team2;
-  document.getElementById('panel-score-mid').textContent = room.claimedSuits.filter(s => s.winner === 0).length;
-  const won1 = room.claimedSuits.filter(s => s.winner === 1);
-  const won2 = room.claimedSuits.filter(s => s.winner === 2);
-  document.getElementById('won-t1').innerHTML = won1.length
-    ? won1.map(s => `<span class="won-suit-badge t1">${s.name}</span>`).join('')
-    : '<span style="font-size:12px;color:#4a3a2a;font-weight:600">—</span>';
-  document.getElementById('won-t2').innerHTML = won2.length
-    ? won2.map(s => `<span class="won-suit-badge t2">${s.name}</span>`).join('')
-    : '<span style="font-size:12px;color:#4a3a2a;font-weight:600">—</span>';
-  renderPanelTray();
-  renderPanelSuits();
-}
 
 function renderPanelTray() {
   const tray = document.getElementById('panel-tray');
@@ -734,12 +832,38 @@ function passTurn(toPlayerId) {
   socket.emit('pass_turn', { toPlayerId }, (res) => { if (!res.ok) alert(res.error || 'Cannot pass'); });
 }
 
-// When it becomes my turn, auto-switch right panel to ASK mode
 function handleTurnChange(room) {
   if (room.currentTurn === socket.id) {
     state.askSuit = null;
     state.rightPanelMode = 'ask';
   }
+}
+
+// ===================== SCORE OVERLAY =====================
+function toggleScoreOverlay() {
+  state.scoreOverlayOpen = !state.scoreOverlayOpen;
+  document.getElementById('score-overlay').classList.toggle('hidden', !state.scoreOverlayOpen);
+  if (state.scoreOverlayOpen) renderScoreOverlay();
+}
+
+function renderScoreOverlay() {
+  const room = state.room; if (!room) return;
+  document.getElementById('so-score-t1').textContent  = room.scores.team1;
+  document.getElementById('so-score-t2').textContent  = room.scores.team2;
+  document.getElementById('so-score-mid').textContent = room.claimedSuits.filter(s => s.winner === 0).length;
+
+  const won1 = room.claimedSuits.filter(s => s.winner === 1);
+  const won2 = room.claimedSuits.filter(s => s.winner === 2);
+  const wonM = room.claimedSuits.filter(s => s.winner === 0);
+
+  document.getElementById('so-suits-t1').innerHTML = won1.length
+    ? won1.map(s => `<span class="so-suit-badge t1">${s.name}</span>`).join('')
+    : '<span style="font-size:11px;color:#3a3a3a">—</span>';
+
+  document.getElementById('so-suits-t2').innerHTML = [
+    ...won2.map(s => `<span class="so-suit-badge t2">${s.name}</span>`),
+    ...wonM.map(s => `<span class="so-suit-badge mid">${s.name} (mid)</span>`),
+  ].join('') || '<span style="font-size:11px;color:#3a3a3a">—</span>';
 }
 
 // ===================== SETTINGS =====================
@@ -804,6 +928,9 @@ function goHome() {
   state.room = null; state.myHand = []; state.inCreateFlow = false;
   state.selectedCard = null; state.selectedTarget = null;
   state.panelCards = []; state.askSuit = null; state.rightPanelMode = 'ask';
+  state.claimSuit = null; state.claimTeam = null; state.claimAssignments = {};
+  state.scoreOverlayOpen = false;
+  document.getElementById('score-overlay').classList.add('hidden');
   document.getElementById('exit-modal').classList.add('hidden');
   document.getElementById('event-overlay').classList.add('hidden');
   document.getElementById('nav').classList.add('hidden');
