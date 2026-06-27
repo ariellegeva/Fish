@@ -61,6 +61,115 @@ a { color: var(--accent); }
 .nav-item:hover { color: #fff; }
 .nav-item.active { color: #fff; border-bottom-color: #c8a878; }
 
+/* ===== LANDING PAGE ===== */
+.landing-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  padding: 40px 20px 60px;
+  background: var(--bg);
+}
+
+/* FISH title letters */
+.fish-title {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  margin-bottom: 48px;
+  line-height: 1;
+}
+
+.fish-title span {
+  font-family: 'Nunito', sans-serif;
+  font-size: clamp(100px, 18vw, 160px);
+  font-weight: 900;
+  display: inline-block;
+  -webkit-text-stroke: 5px #2d2d2d;
+  paint-order: stroke fill;
+  filter: drop-shadow(3px 4px 0px rgba(0,0,0,.18));
+  line-height: 1.05;
+}
+
+.fl-f { color: #72d0f5; transform: rotate(-10deg) translateY(12px); }
+.fl-i { color: #f0a0c8; transform: rotate(-3deg) translateY(-4px); letter-spacing: -4px; }
+.fl-s { color: #f5d060; transform: rotate(4deg) translateY(-6px); }
+.fl-h { color: #f07880; transform: rotate(11deg) translateY(10px); }
+
+/* Landing action area */
+.landing-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  max-width: 420px;
+}
+
+.landing-new-btn {
+  width: 100%;
+  padding: 18px;
+  font-size: 20px;
+  font-weight: 800;
+  font-family: 'Nunito', sans-serif;
+  background: #4caf6e;
+  border: 2.5px solid #2d2d2d;
+  border-radius: 50px;
+  color: #fff;
+  cursor: pointer;
+  box-shadow: 0 4px 0 #2d6a40, 0 6px 12px rgba(0,0,0,.15);
+  transition: transform .1s, box-shadow .1s;
+  letter-spacing: .01em;
+}
+.landing-new-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 0 #2d6a40, 0 8px 16px rgba(0,0,0,.18); }
+.landing-new-btn:active { transform: translateY(2px); box-shadow: 0 2px 0 #2d6a40; }
+
+.landing-or {
+  font-family: 'Nunito', sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.landing-code-input {
+  width: 100%;
+  padding: 16px 22px;
+  font-size: 18px;
+  font-weight: 700;
+  font-family: 'Nunito', sans-serif;
+  text-align: center;
+  letter-spacing: 6px;
+  background: #fff;
+  border: 2.5px solid #2d2d2d;
+  border-radius: 50px;
+  color: var(--text);
+  outline: none;
+  box-shadow: 0 2px 8px rgba(0,0,0,.08);
+  transition: border-color .15s, box-shadow .15s;
+}
+.landing-code-input::placeholder { color: #c0b0a0; letter-spacing: 2px; font-weight: 600; font-size: 15px; }
+.landing-code-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(58,107,196,.15); }
+
+.landing-join-btn {
+  width: 100%;
+  padding: 18px;
+  font-size: 20px;
+  font-weight: 800;
+  font-family: 'Nunito', sans-serif;
+  background: #4a4a4a;
+  border: 2.5px solid #2d2d2d;
+  border-radius: 50px;
+  color: #fff;
+  cursor: pointer;
+  box-shadow: 0 4px 0 #1a1a1a, 0 6px 12px rgba(0,0,0,.2);
+  transition: transform .1s, box-shadow .1s;
+}
+.landing-join-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 0 #1a1a1a, 0 8px 16px rgba(0,0,0,.22); }
+.landing-join-btn:active { transform: translateY(2px); box-shadow: 0 2px 0 #1a1a1a; }
+
 /* ===== PAGES (non-game) ===== */
 .container { max-width: 900px; margin: 0 auto; padding: 24px 16px; }
 .center { text-align: center; }
