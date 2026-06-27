@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fish 🐟</title>
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="cards.css">
+</head>
+<body>
+
+<!-- ==================== LANDING ==================== -->
+<div id="page-landing" class="container" style="max-width:480px;padding-top:60px">
+  <div class="center mb8">
+    <div style="font-size:64px">🐟</div>
+    <h1>Fish</h1>
+    <p class="text-muted" style="margin-bottom:32px">The card game</p>
+  </div>
+
+  <div class="card">
+    <button class="success" style="width:100%;font-size:16px;padding:14px" onclick="showPage('admin-name')">
+      Create a game
+    </button>
+    <div style="text-align:center;margin:16px 0;color:var(--text-muted);font-size:13px">or</div>
+    <div class="field">
+      <label>Enter 4-digit game code</label>
+      <input type="text" id="join-code" maxlength="4" placeholder="e.g. A3KZ" style="text-align:center;font-size:24px;letter-spacing:8px;font-weight:700;text-transform:uppercase">
+    </div>
+    <button style="width:100%" onclick="joinWithCode()">Join game</button>
+  </div>
+</div>
+
+<!-- ==================== ADMIN: NAME ==================== -->
+<div id="page-admin-name" class="container hidden" style="max-width:480px;padding-top:40px">
+  <h2>Create a game</h2>
+  <p class="text-muted mb8">First, who are you?</p>
+  <div class="card">
+    <div class="field">
+      <label>Your name</label>
+      <input type="text" id="admin-name-input" placeholder="Enter your name">
+    </div>
+    <div class="field">
+      <label>Icon (optional)</label>
+      <div class="icon-row">
+        <div class="icon-preview" id="admin-icon-preview" onclick="document.getElementById('admin-icon-file').click()">😀</div>
+        <div>
+          <div class="emoji-grid" id="admin-emoji-grid"></div>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:6px">or <span style="color:var(--accent);cursor:pointer" onclick="document.getElementById('admin-icon-file').click()">upload a photo</span></div>
+          <input type="file" id="admin-icon-file" accept="image/*" style="display:none" onchange="handleIconUpload('admin')">
+        </div>
+      </div>
+    </div>
+    <button onclick="goAdminSettings()" style="width:100%">Continue →</button>
+  </div>
+</div>
+
+<!-- ==================== ADMIN: SETTINGS ==================== -->
+<div id="page-admin-settings" class="container hidden" style="max-width:520px;padding-top:40px">
+  <h2>Game settings</h2>
+  <div class="card">
+    <div class="field">
+      <label>Number of players</label>
+      <div class="count-grid" id="count-grid"></div>
+    </div>
+    <hr class="divider">
+
+    <div class="toggle-row">
+      <div class="toggle-label">
+        Turn time limit
+        <span class="sub">Automatically end a player's turn after a set time</span>
+      </div>
+      <label class="toggle">
+        <input type="checkbox" id="timer-toggle" onchange="toggleTimerSub()">
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+    <div id="timer-sub" class="hidden" style="padding:12px 0 0">
+      <label>Seconds per turn</label>
+      <input type="number" id="timer-seconds" value="60" min="10" max="300" style="width:120px">
+    </div>
+
+    <div class="toggle-row">
+      <div class="toggle-label">
+        Ask mechanism
+        <span class="sub">Coming soon — handle on a separate phone call for now</span>
+      </div>
+      <label class="toggle">
+        <input type="checkbox" disabled>
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+
+    <div class="toggle-row">
+      <div class="toggle-label">
+        Chat
+        <span class="sub">Enable in-game text chat</span>
+      </div>
+      <label class="toggle">
+        <input type="checkbox" id="chat-toggle" checked>
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+
+    <div class="toggle-row">
+      <div class="toggle-label">
+        Team selection
+        <span class="sub">Let players choose their own team</span>
+      </div>
+      <label class="toggle">
+        <input type="checkbox" id="team-selection-toggle">
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+
+    <div class="mt24">
+      <button onclick="createRoom()" style="width:100%;font-size:16px;padding:14px" class="success">Create game →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== LOBBY CODE PAGE ==================== -->
+<div id="page-lobby-code" class="container hidden" style="max-width:480px;padding-top:40px">
+  <div class="center">
+    <h2>Game created! 🎉</h2>
+    <p class="text-muted">Share this code with players</p>
+    <div class="game-code" id="display-code">----</div>
+    <div style="margin:8px 0 24px">
+      <span class="text-muted text-sm">Link: </span>
+      <a href="#" id="share-link" style="font-size:13px"></a>
+      <button class="secondary" style="padding:4px 10px;font-size:12px;margin-left:8px" onclick="copyLink()">Copy</button>
+    </div>
+    <button onclick="showPage('lobby')" style="width:100%">Go to lobby →</button>
+  </div>
+</div>
+
+<!-- ==================== JOIN: NAME ==================== -->
+<div id="page-join-name" class="container hidden" style="max-width:480px;padding-top:40px">
+  <h2>Join game <span id="join-display-code" style="color:var(--accent)"></span></h2>
+  <div class="card">
+    <div class="field">
+      <label>Your name</label>
+      <input type="text" id="join-name-input" placeholder="Enter your name">
+    </div>
+    <div class="field">
+      <label>Icon (optional)</label>
+      <div class="icon-row">
+        <div class="icon-preview" id="join-icon-preview" onclick="document.getElementById('join-icon-file').click()">😀</div>
+        <div>
+          <div class="emoji-grid" id="join-emoji-grid"></div>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:6px">or <span style="color:var(--accent);cursor:pointer" onclick="document.getElementById('join-icon-file').click()">upload a photo</span></div>
+          <input type="file" id="join-icon-file" accept="image/*" style="display:none" onchange="handleIconUpload('join')">
+        </div>
+      </div>
+    </div>
+    <button onclick="joinRoom()" style="width:100%">Join →</button>
+    <p class="text-muted text-sm mt8" id="join-error" style="color:var(--danger)"></p>
+  </div>
+</div>
+
+<!-- ==================== JOIN: TEAM SELECTION ==================== -->
+<div id="page-join-team" class="container hidden" style="max-width:480px;padding-top:40px">
+  <h2>Choose your team</h2>
+  <div class="card">
+    <p class="text-muted mb8">Select which team you'd like to join.</p>
+    <table class="team-table">
+      <thead><tr><th>Team 1</th><th>Team 2</th></tr></thead>
+      <tbody id="team-table-body"></tbody>
+    </table>
+    <div class="mt16">
+      <button class="secondary" style="width:48%" onclick="joinTeam(1)">Join Team 1</button>
+      <button class="secondary" style="width:48%;margin-left:4%" onclick="joinTeam(2)">Join Team 2</button>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== NAV (shared) ==================== -->
+<div id="nav" class="nav hidden">
+  <span class="nav-item" onclick="showTab('game')" id="nav-game">Game</span>
+  <span class="nav-item" onclick="showTab('settings')" id="nav-settings">Settings</span>
+  <span class="nav-item" onclick="showTab('rules')" id="nav-rules">Rules</span>
+  <span class="nav-item" id="nav-chat" onclick="showTab('chat')" style="display:none">Chat</span>
+</div>
+
+<!-- ==================== LOBBY TAB ==================== -->
+<div id="tab-lobby" class="container hidden">
+  <div class="card">
+    <div class="row mb8">
+      <div class="flex1">
+        <h2 style="margin:0">Waiting for players</h2>
+        <p class="text-muted text-sm">Code: <span id="lobby-code" style="font-family:monospace;font-weight:700;color:var(--accent)"></span></p>
+      </div>
+      <div id="lobby-start-btn-wrap">
+        <button class="success" onclick="startGame()" id="lobby-start-btn">Start game</button>
+      </div>
+    </div>
+    <div id="lobby-player-list"></div>
+    <div id="lobby-waiting-msg" class="text-muted text-sm mt8"></div>
+  </div>
+</div>
+
+<!-- ==================== GAME TAB ==================== -->
+<div id="tab-game" class="hidden">
+
+  <!-- Left: table + hand strip -->
+  <div id="game-left">
+
+    <!-- Oval table area -->
+    <div id="game-table-area">
+      <div id="turn-banner-v2"></div>
+      <div id="oval-players"><!-- JS places player tiles here --></div>
+    </div>
+
+    <!-- Bottom hand strip (dark grey) -->
+    <div id="hand-strip">
+      <div id="hand-strip-header">
+        <div>
+          <div id="hand-strip-label">Your hand <span id="hand-count"></span></div>
+          <div id="hand-strip-hint">Click a card to select it, then click an opponent to ask</div>
+        </div>
+        <div id="hand-strip-actions">
+          <div id="action-strip" style="display:none">
+            <span id="ask-summary"></span>
+            <button id="ask-btn" onclick="submitAsk()" disabled>Ask</button>
+            <button class="secondary" onclick="clearAsk()">Clear</button>
+          </div>
+          <div id="pass-area" style="display:none">
+            <span style="font-size:12px;color:#8a7a6a;font-weight:700;margin-right:8px">Out of cards — pass to:</span>
+            <span id="pass-targets"></span>
+          </div>
+          <button style="padding:6px 14px;font-size:13px" onclick="toggleScorePanel()">📊 Score</button>
+        </div>
+      </div>
+      <div id="hand-container-v2"></div>
+    </div>
+
+  </div>
+
+  <!-- Right: score / claims panel -->
+  <div id="score-panel" class="hidden">
+
+    <div class="panel-header">
+      <h3>Scoreboard</h3>
+      <button style="padding:4px 10px;font-size:12px" onclick="toggleScorePanel()">✕</button>
+    </div>
+
+    <div class="panel-section">
+      <div class="team-score-row">
+        <div class="team-score-box t1">
+          <div class="tsb-label">Team 1</div>
+          <div class="tsb-num" id="panel-score-t1">0</div>
+        </div>
+        <div class="team-score-box mid">
+          <div class="tsb-label">Mid</div>
+          <div class="tsb-num" id="panel-score-mid">0</div>
+        </div>
+        <div class="team-score-box t2">
+          <div class="tsb-label">Team 2</div>
+          <div class="tsb-num" id="panel-score-t2">0</div>
+        </div>
+      </div>
+      <!-- Won suits display -->
+      <div class="panel-section-label" style="margin-top:10px">Team 1 suits</div>
+      <div class="won-suits" id="won-t1"></div>
+      <div class="panel-section-label" style="margin-top:8px">Team 2 suits</div>
+      <div class="won-suits" id="won-t2"></div>
+    </div>
+
+    <div class="panel-section">
+      <div class="panel-section-label">Selected cards (for discussion)</div>
+      <div id="panel-tray">
+        <span id="panel-tray-hint">Click cards in your hand</span>
+      </div>
+      <button class="secondary" style="margin-top:8px;width:100%;font-size:12px;padding:6px" onclick="clearSelectedCards()">Clear</button>
+    </div>
+
+    <div class="panel-section-label" style="padding:10px 16px 6px">Award half suits</div>
+    <div class="panel-suit-list" id="panel-suits-list"></div>
+
+  </div>
+</div>
+
+<!-- ==================== SETTINGS TAB ==================== -->
+<div id="tab-settings" class="container hidden">
+  <div class="card">
+    <h2>Settings</h2>
+    <div id="settings-view"></div>
+    <div id="settings-admin-note" class="text-muted text-sm mt8 hidden">Only the game admin can change settings.</div>
+  </div>
+</div>
+
+<!-- ==================== RULES TAB ==================== -->
+<div id="tab-rules" class="container hidden">
+  <div class="card rules-content">
+    <h2>The Rules of Fish 🐟</h2>
+    <p>You are on a team with every other person in the circle — teams alternate.</p>
+    <p>You want to collect the cards in each <strong>half suit</strong>.</p>
+
+    <h3>Half Suits</h3>
+    <p>Each half suit has six cards. There are <strong>no 8s or Jokers</strong> in the game.</p>
+    <ul>
+      <li>♥ 2 3 4 5 6 7 = Low Hearts</li>
+      <li>♥ 9 10 J Q K A = High Hearts</li>
+      <li>Same for clubs, diamonds, and spades.</li>
+    </ul>
+
+    <h3>Asking</h3>
+    <ul>
+      <li>If you ask someone for a card and <strong>they have it</strong>, they give it to you and you get another turn.</li>
+      <li>If they <strong>don't have it</strong>, it becomes their turn.</li>
+      <li>You can only ask members of the <strong>opposite team</strong>.</li>
+      <li>You can only ask for cards in a half suit <strong>that you already hold a card from</strong>.</li>
+      <li><strong>You cannot ask for a card you already hold.</strong></li>
+      <li>If you're out of cards you can still claim, but can't ask. If it's still your turn you can pass to a teammate.</li>
+    </ul>
+
+    <h3>Claiming</h3>
+    <ul>
+      <li>You can claim when it is <strong>your team's turn</strong>.</li>
+      <li>You should only claim if you think all 6 cards in a half suit are on <strong>one team</strong>.</li>
+      <li>When claiming, state which player you think has <strong>each of the 6 cards</strong>.</li>
+      <li>If correct → your team gets the suit (1 point).</li>
+      <li>If right team but wrong positions → 0 points, suit goes to the middle.</li>
+      <li>If wrong team has a card → opposite team gets the suit.</li>
+      <li>Once you start a claim you <strong>must follow through</strong>.</li>
+      <li>You <strong>cannot communicate</strong> with your team during a claim.</li>
+    </ul>
+
+    <h3>Communicating with your team</h3>
+    <p>You can only communicate through <strong>the cards you ask for</strong> — by repeatedly asking the same question or pointedly blocking out a player.</p>
+  </div>
+</div>
+
+<!-- ==================== CHAT TAB ==================== -->
+<div id="tab-chat" class="container hidden">
+  <div class="card">
+    <h2 style="margin-bottom:12px">Chat</h2>
+    <div class="chat-box" id="chat-box"></div>
+    <div class="chat-input-row">
+      <input type="text" id="chat-input" placeholder="Type a message..." onkeydown="if(event.key==='Enter')sendChat()">
+      <button onclick="sendChat()">Send</button>
+    </div>
+  </div>
+</div>
+
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

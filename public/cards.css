@@ -1,0 +1,203 @@
+/* ===== CARD DESIGN ===== */
+
+/* Face-up card */
+.card-face {
+  width: 58px;
+  height: 82px;
+  background: #fff;
+  border-radius: 10px;
+  border: 2px solid #2d2d2d;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding: 4px 5px;
+  box-shadow: 2px 2px 5px rgba(0,0,0,.18);
+  font-family: 'Nunito', sans-serif;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.card-face .rank-top {
+  font-size: 13px;
+  font-weight: 900;
+  line-height: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+}
+
+.card-face .rank-top .suit-small { font-size: 11px; line-height: 1; }
+
+.card-face .suit-center {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  line-height: 1;
+}
+
+.card-face .rank-bottom {
+  font-size: 13px;
+  font-weight: 900;
+  transform: rotate(180deg);
+  align-self: flex-end;
+  line-height: 1;
+}
+
+.card-face.red { color: #c0392b; }
+.card-face.black { color: #2d2d2d; }
+
+/* Face-down card (back) */
+.card-back {
+  width: 58px;
+  height: 82px;
+  border-radius: 10px;
+  border: 2px solid #2d2d2d;
+  background: #2d2d2d;
+  box-shadow: 2px 2px 5px rgba(0,0,0,.25);
+  position: relative;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.card-back::before {
+  content: '';
+  position: absolute;
+  inset: 5px;
+  border-radius: 5px;
+  border: 1.5px solid rgba(255,255,255,.25);
+  background:
+    repeating-linear-gradient(45deg, rgba(255,255,255,.06) 0px, rgba(255,255,255,.06) 1px, transparent 1px, transparent 7px),
+    repeating-linear-gradient(-45deg, rgba(255,255,255,.06) 0px, rgba(255,255,255,.06) 1px, transparent 1px, transparent 7px);
+}
+
+/* Card stacked effect — wraps a .card-back or .card-face */
+.card-stack-wrap {
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+.card-stack-wrap .stack-shadow-2 {
+  position: absolute;
+  inset: 0;
+  border-radius: 10px;
+  background: #3d3d3d;
+  border: 2px solid #2d2d2d;
+  transform: translate(5px, 5px);
+  z-index: 0;
+}
+
+.card-stack-wrap .stack-shadow-1 {
+  position: absolute;
+  inset: 0;
+  border-radius: 10px;
+  background: #4d4d4d;
+  border: 2px solid #2d2d2d;
+  transform: translate(3px, 3px);
+  z-index: 1;
+}
+
+.card-stack-wrap > .card-back,
+.card-stack-wrap > .card-face {
+  position: relative;
+  z-index: 2;
+}
+
+.card-stack-count {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  background: #c0392b;
+  color: #fff;
+  border-radius: 50%;
+  width: 22px;
+  height: 22px;
+  font-size: 11px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  border: 2px solid #fff;
+  font-family: 'Nunito', sans-serif;
+}
+
+/* Hand strip cards — larger */
+.hand-card-v2 {
+  width: 72px;
+  height: 102px;
+  background: #fff;
+  border-radius: 12px;
+  border: 2.5px solid #2d2d2d;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding: 5px 7px;
+  box-shadow: 2px 3px 8px rgba(0,0,0,.25);
+  font-family: 'Nunito', sans-serif;
+  cursor: pointer;
+  transition: transform .15s, box-shadow .15s;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.hand-card-v2:hover { transform: translateY(-8px); box-shadow: 2px 8px 16px rgba(0,0,0,.3); }
+.hand-card-v2.selected { transform: translateY(-12px); box-shadow: 0 10px 20px rgba(88,130,255,.5); border-color: #4a7aff; }
+.hand-card-v2.in-panel { transform: translateY(-8px); box-shadow: 0 8px 16px rgba(63,185,80,.4); border-color: #3fb950; }
+
+.hand-card-v2 .rank-top {
+  font-size: 16px;
+  font-weight: 900;
+  line-height: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.hand-card-v2 .rank-top .suit-small { font-size: 13px; line-height: 1; }
+.hand-card-v2 .suit-center {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 34px;
+  line-height: 1;
+}
+.hand-card-v2 .rank-bottom {
+  font-size: 16px;
+  font-weight: 900;
+  transform: rotate(180deg);
+  align-self: flex-end;
+  line-height: 1;
+}
+.hand-card-v2.red { color: #c0392b; }
+.hand-card-v2.black { color: #2d2d2d; }
+
+/* Claimed suit mini-stack in score panel */
+.claimed-card-stack {
+  display: inline-flex;
+  position: relative;
+  width: 44px;
+  height: 62px;
+}
+.claimed-card-stack .cc {
+  position: absolute;
+  width: 40px;
+  height: 58px;
+  background: #fff;
+  border-radius: 7px;
+  border: 1.5px solid #2d2d2d;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 800;
+  font-family: 'Nunito', sans-serif;
+}
+.claimed-card-stack .cc:nth-child(1) { left: 0; top: 4px; z-index: 3; }
+.claimed-card-stack .cc:nth-child(2) { left: 2px; top: 2px; z-index: 2; background: #f0f0f0; }
+.claimed-card-stack .cc:nth-child(3) { left: 4px; top: 0; z-index: 1; background: #e8e8e8; }
+.claimed-card-stack .cc.red { color: #c0392b; }
+.claimed-card-stack .cc.black { color: #2d2d2d; }
