@@ -447,9 +447,10 @@ function renderActionStrip() {
     passArea.style.display = 'none'; askArea.style.display = 'flex';
     const targetPlayer = state.selectedTarget && room.players.find(p => p.id === state.selectedTarget);
     const hs = state.selectedCard && cardToHalfSuit(state.selectedCard);
+    const red = state.selectedCard && cardRed(state.selectedCard);
     document.getElementById('ask-summary').innerHTML = state.selectedCard
-      ? `Asking <strong style="color:#fff">${targetPlayer ? targetPlayer.name : '—'}</strong> for <strong style="color:#fff">${state.selectedCard}</strong>${hs ? ` <span style="color:#7a6a5a">(${hs.name} ${hs.suit})</span>` : ''}`
-      : `<span style="color:#6a5a4a">Pick a suit → card → opponent</span>`;
+      ? `Asking <span class="ask-hi">${targetPlayer ? targetPlayer.name : '—'}</span> for <span class="ask-card-badge${red ? ' red' : ''}">${state.selectedCard}</span>${hs ? ` <span style="color:#6a5a4a;font-size:13px">(${hs.name} ${hs.suit})</span>` : ''}`
+      : `<span style="color:#5a4a3a">Pick a suit → card → opponent</span>`;
     document.getElementById('ask-btn').disabled = !state.selectedCard || !state.selectedTarget;
     hint.textContent = '';
   } else {
