@@ -215,18 +215,30 @@
   <!-- Left: table + hand strip -->
   <div id="game-left">
 
-    <!-- Oval table area -->
+    <!-- Table area -->
     <div id="game-table-area">
       <div id="turn-banner-v2"></div>
-      <div id="oval-players"><!-- JS places player tiles here --></div>
+      <div id="oval-players"></div>
+
+      <!-- Ask/result event overlay (shown center-table for all players) -->
+      <div id="event-overlay" class="hidden">
+        <div id="event-box">
+          <div id="event-card-el"></div>
+          <div id="event-body">
+            <div id="event-names"></div>
+            <div id="event-msg"></div>
+          </div>
+          <div id="event-sym"></div>
+        </div>
+      </div>
     </div>
 
-    <!-- Bottom hand strip (dark grey) -->
+    <!-- Bottom hand strip -->
     <div id="hand-strip">
       <div id="hand-strip-header">
         <div>
           <div id="hand-strip-label">Your hand <span id="hand-count"></span></div>
-          <div id="hand-strip-hint">Click a card to select it, then click an opponent to ask</div>
+          <div id="hand-strip-hint"></div>
         </div>
         <div id="hand-strip-actions">
           <div id="action-strip" style="display:none">
@@ -238,7 +250,6 @@
             <span style="font-size:12px;color:#8a7a6a;font-weight:700;margin-right:8px">Out of cards — pass to:</span>
             <span id="pass-targets"></span>
           </div>
-          <button style="padding:6px 14px;font-size:13px" onclick="toggleScorePanel()">📊 Score</button>
         </div>
       </div>
       <div id="hand-container-v2"></div>
@@ -246,46 +257,44 @@
 
   </div>
 
-  <!-- Right: score / claims panel -->
-  <div id="score-panel" class="hidden">
+  <!-- Right panel: ASK (my turn) or SCORE (always accessible) -->
+  <div id="right-panel">
 
-    <div class="panel-header">
-      <h3>Scoreboard</h3>
-      <button style="padding:4px 10px;font-size:12px" onclick="toggleScorePanel()">✕</button>
-    </div>
-
-    <div class="panel-section">
-      <div class="team-score-row">
-        <div class="team-score-box t1">
-          <div class="tsb-label">Team 1</div>
-          <div class="tsb-num" id="panel-score-t1">0</div>
-        </div>
-        <div class="team-score-box mid">
-          <div class="tsb-label">Mid</div>
-          <div class="tsb-num" id="panel-score-mid">0</div>
-        </div>
-        <div class="team-score-box t2">
-          <div class="tsb-label">Team 2</div>
-          <div class="tsb-num" id="panel-score-t2">0</div>
-        </div>
+    <!-- ASK mode -->
+    <div id="rp-ask" class="hidden">
+      <div class="rp-header">
+        <span class="rp-title">ASK</span>
+        <button class="rp-tab-btn" onclick="showRightPanel('score')">Score ▸</button>
       </div>
-      <!-- Won suits display -->
-      <div class="panel-section-label" style="margin-top:10px">Team 1 suits</div>
-      <div class="won-suits" id="won-t1"></div>
-      <div class="panel-section-label" style="margin-top:8px">Team 2 suits</div>
-      <div class="won-suits" id="won-t2"></div>
+      <div class="rp-hint">Pick a half-suit you hold, then a card, then a player</div>
+      <div id="ask-suit-list"></div>
     </div>
 
-    <div class="panel-section">
-      <div class="panel-section-label">Selected cards (for discussion)</div>
-      <div id="panel-tray">
-        <span id="panel-tray-hint">Click cards in your hand</span>
+    <!-- SCORE mode -->
+    <div id="rp-score" class="hidden">
+      <div class="rp-header">
+        <span class="rp-title">SCORE</span>
+        <button class="rp-tab-btn" id="rp-back-ask" onclick="showRightPanel('ask')" style="display:none">◂ Ask</button>
       </div>
-      <button class="secondary" style="margin-top:8px;width:100%;font-size:12px;padding:6px" onclick="clearSelectedCards()">Clear</button>
+      <div class="panel-section">
+        <div class="team-score-row">
+          <div class="team-score-box t1"><div class="tsb-label">Team 1</div><div class="tsb-num" id="panel-score-t1">0</div></div>
+          <div class="team-score-box mid"><div class="tsb-label">Mid</div><div class="tsb-num" id="panel-score-mid">0</div></div>
+          <div class="team-score-box t2"><div class="tsb-label">Team 2</div><div class="tsb-num" id="panel-score-t2">0</div></div>
+        </div>
+        <div class="panel-section-label" style="margin-top:10px">Team 1</div>
+        <div class="won-suits" id="won-t1"></div>
+        <div class="panel-section-label" style="margin-top:8px">Team 2</div>
+        <div class="won-suits" id="won-t2"></div>
+      </div>
+      <div class="panel-section">
+        <div class="panel-section-label">Selected cards</div>
+        <div id="panel-tray"><span id="panel-tray-hint">Click cards in your hand</span></div>
+        <button class="secondary" style="margin-top:8px;width:100%;font-size:12px;padding:6px" onclick="clearSelectedCards()">Clear</button>
+      </div>
+      <div class="panel-section-label" style="padding:10px 16px 6px">Award half suits</div>
+      <div class="panel-suit-list" id="panel-suits-list"></div>
     </div>
-
-    <div class="panel-section-label" style="padding:10px 16px 6px">Award half suits</div>
-    <div class="panel-suit-list" id="panel-suits-list"></div>
 
   </div>
 </div>

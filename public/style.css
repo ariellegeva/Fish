@@ -292,6 +292,154 @@ label { display: block; font-size: 13px; color: var(--text-muted); margin-bottom
   font-family: 'Nunito', sans-serif;
 }
 
+/* ===== EVENT OVERLAY (ask / result) ===== */
+#event-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 40;
+  padding: 16px;
+  pointer-events: none;
+}
+#event-overlay.show { pointer-events: auto; }
+
+#event-box {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  background: #fff;
+  border: 3.5px solid #2d6a40;
+  border-radius: 18px;
+  padding: 20px 28px;
+  width: min(580px, 90%);
+  box-shadow: 0 8px 32px rgba(0,0,0,.25);
+  transition: background .35s, border-color .35s;
+}
+#event-box.got-it  { background: #5aba78; border-color: #2d7040; }
+#event-box.no-card { background: #d97060; border-color: #8a3020; }
+
+#event-body { flex: 1; }
+#event-names { font-size: 12px; font-weight: 700; color: rgba(0,0,0,.45); margin-bottom: 4px; font-family: 'Nunito', sans-serif; }
+#event-msg   { font-size: 18px; font-weight: 800; color: #2d2d2d; font-family: 'Nunito', sans-serif; line-height: 1.3; }
+#event-box.got-it  #event-msg,
+#event-box.got-it  #event-names { color: #fff; }
+#event-box.no-card #event-msg,
+#event-box.no-card #event-names { color: #fff; }
+
+#event-sym {
+  font-size: 64px;
+  font-weight: 900;
+  color: #c0392b;
+  min-width: 56px;
+  text-align: center;
+  font-family: 'Nunito', sans-serif;
+  line-height: 1;
+}
+#event-box.got-it  #event-sym { color: rgba(255,255,255,.9); }
+#event-box.no-card #event-sym { color: rgba(255,255,255,.85); }
+
+/* Card flip animation for "got it" */
+@keyframes card-flip {
+  0%   { transform: rotateY(0deg) scale(1); }
+  30%  { transform: rotateY(90deg) scale(1.1) translateY(-8px); }
+  60%  { transform: rotateY(0deg) scale(1.15) translateY(-10px); }
+  80%  { transform: rotateY(0deg) scale(0.97) translateY(-2px); }
+  100% { transform: rotateY(0deg) scale(1); }
+}
+.card-flip-anim .card-back { animation: card-flip .7s ease-in-out; }
+
+/* ===== RIGHT PANEL ===== */
+#right-panel {
+  width: 260px;
+  flex-shrink: 0;
+  background: var(--dark);
+  border-left: 3px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+#rp-ask, #rp-score { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
+
+.rp-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 16px 12px;
+  border-bottom: 1px solid var(--dark2);
+  flex-shrink: 0;
+}
+.rp-title {
+  font-size: 28px;
+  font-weight: 900;
+  color: #fff;
+  letter-spacing: .06em;
+  font-family: 'Nunito', sans-serif;
+}
+.rp-tab-btn {
+  background: transparent;
+  border: 1px solid var(--dark3);
+  color: #8a7a6a;
+  padding: 4px 10px;
+  font-size: 11px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: 'Nunito', sans-serif;
+  font-weight: 700;
+}
+.rp-tab-btn:hover { color: #c8b89a; border-color: #6a5a4a; }
+
+.rp-hint {
+  padding: 8px 16px;
+  font-size: 11px;
+  color: #6a5a4a;
+  font-weight: 600;
+  font-family: 'Nunito', sans-serif;
+  flex-shrink: 0;
+}
+
+/* Suit buttons in ASK panel */
+#ask-suit-list {
+  overflow-y: auto;
+  flex: 1;
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ask-suit-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #fff;
+  border: 2.5px solid #2d2d2d;
+  border-radius: 12px;
+  padding: 12px 16px;
+  font-size: 20px;
+  font-weight: 900;
+  font-family: 'Nunito', sans-serif;
+  cursor: pointer;
+  transition: all .15s;
+  color: #2d2d2d;
+  box-shadow: 0 2px 0 #2d2d2d;
+  user-select: none;
+}
+.ask-suit-btn:hover  { transform: translateY(-2px); box-shadow: 0 4px 0 #2d2d2d; }
+.ask-suit-btn.selected { background: #e8f4ff; border-color: #3a6bc4; box-shadow: 0 2px 0 #3a6bc4; color: #3a6bc4; }
+.ask-suit-btn .suit-sym { font-size: 24px; }
+.ask-suit-btn .suit-sym.red { color: #c0392b; }
+.ask-suit-btn .suit-sym.black { color: #2d2d2d; }
+.ask-suit-btn.selected .suit-sym.black { color: #3a6bc4; }
+
+/* Dim hand cards not in selected suit */
+.hand-card-v2.dimmed { opacity: .3; pointer-events: none; }
+
+/* ===== SCORE content (inside rp-score) ===== */
+#rp-score .panel-section { flex-shrink: 0; }
+
 /* ===== GAME LAYOUT ===== */
 #tab-game {
   display: flex;
@@ -444,18 +592,6 @@ label { display: block; font-size: 13px; color: var(--text-muted); margin-bottom
 }
 #ask-summary strong { color: #fff; }
 
-/* ===== SCORE PANEL ===== */
-#score-panel {
-  width: 280px;
-  flex-shrink: 0;
-  background: var(--dark);
-  border-left: 3px solid var(--border);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-#score-panel.hidden { display: none; }
 
 .panel-header {
   display: flex; align-items: center; justify-content: space-between;

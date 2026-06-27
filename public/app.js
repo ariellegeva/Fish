@@ -2,14 +2,14 @@
 const EMOJIS = ['😀','😎','🐟','🦈','🐙','🦊','🐻','🐼','🦁','🐯','🐸','🦋','🌊','⭐','🎯','🎲','🍕','🚀'];
 
 const HALF_SUITS = [
-  { id: 'low_hearts',    name: 'Low ♥',    cards: ['2♥','3♥','4♥','5♥','6♥','7♥'],   red: true },
-  { id: 'high_hearts',   name: 'High ♥',   cards: ['9♥','10♥','J♥','Q♥','K♥','A♥'],  red: true },
-  { id: 'low_clubs',     name: 'Low ♣',    cards: ['2♣','3♣','4♣','5♣','6♣','7♣'],   red: false },
-  { id: 'high_clubs',    name: 'High ♣',   cards: ['9♣','10♣','J♣','Q♣','K♣','A♣'],  red: false },
-  { id: 'low_diamonds',  name: 'Low ♦',    cards: ['2♦','3♦','4♦','5♦','6♦','7♦'],   red: true },
-  { id: 'high_diamonds', name: 'High ♦',   cards: ['9♦','10♦','J♦','Q♦','K♦','A♦'],  red: true },
-  { id: 'low_spades',    name: 'Low ♠',    cards: ['2♠','3♠','4♠','5♠','6♠','7♠'],   red: false },
-  { id: 'high_spades',   name: 'High ♠',   cards: ['9♠','10♠','J♠','Q♠','K♠','A♠'],  red: false },
+  { id: 'low_hearts',    name: 'Low',    suit: '♥', cards: ['2♥','3♥','4♥','5♥','6♥','7♥'],   red: true },
+  { id: 'high_hearts',   name: 'High',   suit: '♥', cards: ['9♥','10♥','J♥','Q♥','K♥','A♥'],  red: true },
+  { id: 'low_clubs',     name: 'Low',    suit: '♣', cards: ['2♣','3♣','4♣','5♣','6♣','7♣'],   red: false },
+  { id: 'high_clubs',    name: 'High',   suit: '♣', cards: ['9♣','10♣','J♣','Q♣','K♣','A♣'],  red: false },
+  { id: 'low_diamonds',  name: 'Low',    suit: '♦', cards: ['2♦','3♦','4♦','5♦','6♦','7♦'],   red: true },
+  { id: 'high_diamonds', name: 'High',   suit: '♦', cards: ['9♦','10♦','J♦','Q♦','K♦','A♦'],  red: true },
+  { id: 'low_spades',    name: 'Low',    suit: '♠', cards: ['2♠','3♠','4♠','5♠','6♠','7♠'],   red: false },
+  { id: 'high_spades',   name: 'High',   suit: '♠', cards: ['9♠','10♠','J♠','Q♠','K♠','A♠'],  red: false },
 ];
 
 function cardSuit(card) {
@@ -19,7 +19,7 @@ function cardSuit(card) {
   return '♠';
 }
 function cardRank(card) { return card.replace(/[♥♦♣♠]/g, ''); }
-function cardRed(card) { return card.includes('♥') || card.includes('♦'); }
+function cardRed(card)  { return card.includes('♥') || card.includes('♦'); }
 function cardToHalfSuit(card) { return HALF_SUITS.find(hs => hs.cards.includes(card)); }
 
 // ===================== STATE =====================
@@ -31,12 +31,17 @@ let state = {
   room: null,
   myHand: [],
   myId: null,
+  // asking state
+  askSuit: null,       // selected half-suit id in ASK panel
   selectedCard: null,
   selectedTarget: null,
+  // score/panel
   panelCards: [],
-  scorePanelOpen: false,
-  inCreateFlow: false,  // true once user starts creating/joining — blocks checkRestore redirect
+  rightPanelMode: 'ask', // 'ask' | 'score'
+  inCreateFlow: false,
 };
+
+let eventOverlayTimer = null;
 
 // ===================== INIT =====================
 window.addEventListener('DOMContentLoaded', () => {
@@ -56,13 +61,11 @@ window.addEventListener('DOMContentLoaded', () => {
 
 function initSocket() {
   socket = io();
-
   socket.on('connect', () => { state.myId = socket.id; });
 
   socket.on('room_update', (room) => {
     const wasPlaying = state.room && state.room.phase === 'playing';
     state.room = room;
-    // Auto-navigate everyone to game tab when game starts
     if (!wasPlaying && room.phase === 'playing') {
       document.getElementById('nav').classList.remove('hidden');
       updateNav();
@@ -75,6 +78,8 @@ function initSocket() {
   socket.on('your_hand', (hand) => {
     state.myHand = hand;
     state.panelCards = state.panelCards.filter(c => hand.includes(c));
+    // If selected card no longer in hand, clear ask state
+    if (state.selectedCard && !hand.includes(state.selectedCard)) clearAsk();
     renderHand();
     renderActionStrip();
     renderPanelTray();
@@ -86,13 +91,15 @@ function initSocket() {
     document.getElementById('exit-modal-text').textContent = `${name} exited the game.`;
     document.getElementById('exit-modal').classList.remove('hidden');
   });
+
+  socket.on('ask_result', (data) => showEventOverlay(data));
 }
 
 function checkRestore() {
   const saved = getSaved();
   if (!saved) return;
   const doRejoin = () => {
-    if (state.inCreateFlow) return; // user started fresh — don't redirect
+    if (state.inCreateFlow) return;
     state.myId = socket.id;
     socket.emit('join_room', { code: saved.code, name: saved.name, icon: saved.icon }, (res) => {
       if (!res.ok || state.inCreateFlow) return;
@@ -136,11 +143,9 @@ function showTab(name) {
 }
 
 function updateNav() {
-  const room = state.room;
-  if (!room) return;
+  const room = state.room; if (!room) return;
   document.getElementById('nav').classList.remove('hidden');
   document.getElementById('nav-chat').style.display = room.settings.chatEnabled ? '' : 'none';
-
   let ln = document.getElementById('nav-lobby');
   if (!ln) {
     ln = document.createElement('span');
@@ -184,15 +189,15 @@ function buildCountGrid() {
   const grid = document.getElementById('count-grid');
   counts.forEach(n => {
     const b = document.createElement('div');
-    b.className = 'count-btn' + (n===state.selectedCount?' selected':'');
-    b.innerHTML = `${n}${n===2?'<span class="cs-label">test</span>':''}`;
+    b.className = 'count-btn' + (n === state.selectedCount ? ' selected' : '');
+    b.innerHTML = `${n}${n===2 ? '<span class="cs-label">test</span>' : ''}`;
     b.onclick = () => selectCount(n);
     grid.appendChild(b);
   });
 }
 function selectCount(n) {
   state.selectedCount = n;
-  document.querySelectorAll('.count-btn').forEach(b => b.classList.toggle('selected', parseInt(b.textContent)===n));
+  document.querySelectorAll('.count-btn').forEach(b => b.classList.toggle('selected', parseInt(b.textContent) === n));
 }
 function toggleTimerSub() {
   document.getElementById('timer-sub').classList.toggle('hidden', !document.getElementById('timer-toggle').checked);
@@ -202,7 +207,7 @@ function toggleTimerSub() {
 function goAdminSettings() {
   if (!document.getElementById('admin-name-input').value.trim()) return alert('Please enter your name.');
   state.inCreateFlow = true;
-  localStorage.removeItem('fish_session'); // clear stale session so restore can't interfere
+  localStorage.removeItem('fish_session');
   showPage('admin-settings');
 }
 function createRoom() {
@@ -211,7 +216,7 @@ function createRoom() {
   const settings = {
     numPlayers: state.selectedCount,
     timerEnabled: document.getElementById('timer-toggle').checked,
-    timerSeconds: parseInt(document.getElementById('timer-seconds').value)||60,
+    timerSeconds: parseInt(document.getElementById('timer-seconds').value) || 60,
     chatEnabled: document.getElementById('chat-toggle').checked,
     teamSelection: document.getElementById('team-selection-toggle').checked,
   };
@@ -245,10 +250,10 @@ function joinRoom(teamOverride) {
   const icon = state.joinIcon;
   const code = state.pendingCode || getUrlCode();
   if (!code) return;
-  socket.emit('join_room', { code, name, icon, team: teamOverride||null }, (res) => {
-    if (!res.ok) { document.getElementById('join-error').textContent = res.error||'Could not join.'; return; }
-    state.room = res.room; state.myHand = res.myHand||[]; saveSession(code, name, icon);
-    if (res.room.settings.teamSelection && res.room.phase==='lobby' && !teamOverride) {
+  socket.emit('join_room', { code, name, icon, team: teamOverride || null }, (res) => {
+    if (!res.ok) { document.getElementById('join-error').textContent = res.error || 'Could not join.'; return; }
+    state.room = res.room; state.myHand = res.myHand || []; saveSession(code, name, icon);
+    if (res.room.settings.teamSelection && res.room.phase === 'lobby' && !teamOverride) {
       showPage('join-team'); renderTeamTable();
     } else {
       showPage('lobby'); updateNav(); renderLobby();
@@ -260,19 +265,19 @@ function joinTeam(team) {
   const name = document.getElementById('join-name-input').value.trim();
   const code = state.pendingCode || getUrlCode();
   socket.emit('join_room', { code, name, icon: state.joinIcon, team }, (res) => {
-    if (!res.ok) return alert(res.error||'Could not join team.');
+    if (!res.ok) return alert(res.error || 'Could not join team.');
     state.room = res.room; saveSession(code, name, state.joinIcon);
     showPage('lobby'); updateNav(); renderLobby();
   });
 }
 function renderTeamTable() {
   const room = state.room; if (!room) return;
-  const t1 = room.players.filter(p=>p.team===1), t2 = room.players.filter(p=>p.team===2);
+  const t1 = room.players.filter(p => p.team === 1), t2 = room.players.filter(p => p.team === 2);
   const tbody = document.getElementById('team-table-body');
   tbody.innerHTML = '';
-  for (let i=0; i<Math.max(t1.length,t2.length,1); i++) {
+  for (let i = 0; i < Math.max(t1.length, t2.length, 1); i++) {
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${t1[i]?playerInline(t1[i]):''}</td><td>${t2[i]?playerInline(t2[i]):''}</td>`;
+    tr.innerHTML = `<td>${t1[i] ? playerInline(t1[i]) : ''}</td><td>${t2[i] ? playerInline(t2[i]) : ''}</td>`;
     tbody.appendChild(tr);
   }
 }
@@ -287,20 +292,20 @@ function renderLobby() {
   document.getElementById('lobby-start-btn').disabled = !canStart;
   const needed = room.settings.numPlayers - room.players.length;
   document.getElementById('lobby-waiting-msg').textContent =
-    needed > 0 ? `Waiting for ${needed} more player${needed!==1?'s':''}...` : 'All players present!';
+    needed > 0 ? `Waiting for ${needed} more player${needed !== 1 ? 's' : ''}...` : 'All players present!';
   document.getElementById('lobby-player-list').innerHTML = room.players.map(p => `
-    <div class="player-card ${p.connected?'':'disconnected'}">
-      <div class="player-avatar avatar-t${p.team}">${isImg(p.icon)?`<img src="${p.icon}">`:`${p.icon}`}</div>
+    <div class="player-card ${p.connected ? '' : 'disconnected'}">
+      <div class="player-avatar avatar-t${p.team}">${isImg(p.icon) ? `<img src="${p.icon}">` : p.icon}</div>
       <div class="player-info">
-        <div class="player-name">${p.name} ${p.id===room.adminId?'👑':''}</div>
-        <div class="player-meta">${p.connected?'Online':'Disconnected'}</div>
+        <div class="player-name">${p.name} ${p.id === room.adminId ? '👑' : ''}</div>
+        <div class="player-meta">${p.connected ? 'Online' : 'Disconnected'}</div>
       </div>
       <span class="team-badge team${p.team}">Team ${p.team}</span>
     </div>`).join('');
 }
 function startGame() {
   socket.emit('start_game', {}, (res) => {
-    if (!res?.ok) return alert(res?.error||'Could not start');
+    if (!res?.ok) return alert(res?.error || 'Could not start');
     updateNav(); showTab('game');
   });
 }
@@ -310,7 +315,7 @@ function renderAll() {
   updateNav();
   const room = state.room; if (!room) return;
   if (!document.getElementById('tab-lobby').classList.contains('hidden')) renderLobby();
-  if (!document.getElementById('tab-game').classList.contains('hidden')) renderGameTab();
+  if (!document.getElementById('tab-game').classList.contains('hidden'))  renderGameTab();
   if (!document.getElementById('tab-settings').classList.contains('hidden')) renderSettings();
 }
 
@@ -321,7 +326,7 @@ function renderGameTab() {
   renderOvalPlayers();
   renderHand();
   renderActionStrip();
-  renderScorePanel();
+  renderRightPanel();
 }
 
 function renderTurnBanner() {
@@ -339,7 +344,6 @@ function renderOvalPlayers() {
   const room = state.room; if (!room) return;
   const container = document.getElementById('oval-players');
   container.innerHTML = '';
-
   const players = room.players;
   const myIdx = players.findIndex(p => p.id === socket.id);
   const n = players.length;
@@ -347,12 +351,9 @@ function renderOvalPlayers() {
   const myTurn = room.currentTurn === socket.id;
 
   players.forEach((p, i) => {
-    // Offset so "me" lands at bottom-center (angle 90° in SVG coords = bottom)
     const offset = (i - myIdx + n) % n;
-    const angleDeg = 90 + (offset / n) * 360; // 90° = bottom
+    const angleDeg = 90 + (offset / n) * 360;
     const angleRad = (angleDeg * Math.PI) / 180;
-
-    // Oval: 40% wide, 35% tall from center
     const rx = 38, ry = 32;
     const xPct = 50 + rx * Math.cos(angleRad);
     const yPct = 50 + ry * Math.sin(angleRad);
@@ -363,21 +364,9 @@ function renderOvalPlayers() {
     const isTargeted = state.selectedTarget === p.id;
     const isMe = p.id === socket.id;
 
-    const tile = document.createElement('div');
-    tile.className = [
-      'player-oval-tile',
-      isCurrent ? 'current-turn' : '',
-      isClickable ? 'clickable' : '',
-      isTargeted ? 'targeted' : '',
-      !p.connected ? 'disconnected' : '',
-    ].join(' ');
-    tile.style.left = xPct + '%';
-    tile.style.top = yPct + '%';
-    if (isClickable || (myTurn && isOpponent)) tile.onclick = () => selectTarget(p.id);
-
     const cardCount = p.cardCount || 0;
     const stackHTML = cardCount > 0
-      ? `<div class="card-stack-wrap" style="margin-top:4px">
+      ? `<div class="card-stack-wrap" id="stack-${p.id}" style="margin-top:4px">
            <div class="stack-shadow-2"></div>
            <div class="stack-shadow-1"></div>
            <div class="card-back"></div>
@@ -385,27 +374,40 @@ function renderOvalPlayers() {
          </div>`
       : `<div style="height:30px;font-size:11px;color:#9a8a7a;font-weight:700;padding-top:8px">no cards</div>`;
 
+    const tile = document.createElement('div');
+    tile.className = ['player-oval-tile', isCurrent?'current-turn':'', isClickable?'clickable':'',
+      isTargeted?'targeted':'', !p.connected?'disconnected':''].join(' ');
+    tile.style.left = xPct + '%';
+    tile.style.top = yPct + '%';
+    if (isClickable || (myTurn && isOpponent)) tile.onclick = () => selectTarget(p.id);
+
     tile.innerHTML = `
-      <div class="player-avatar-big avatar-t${p.team}">${isImg(p.icon)?`<img src="${p.icon}">`:`${p.icon}`}</div>
-      <div class="player-oval-name">${p.name}${p.id===room.adminId?' 👑':''}${isMe?' (you)':''}</div>
+      <div class="player-avatar-big avatar-t${p.team}">${isImg(p.icon) ? `<img src="${p.icon}">` : p.icon}</div>
+      <div class="player-oval-name">${p.name}${p.id === room.adminId ? ' 👑' : ''}${isMe ? ' (you)' : ''}</div>
       <span class="player-oval-team t${p.team}">T${p.team}</span>
       ${stackHTML}`;
     container.appendChild(tile);
   });
 }
 
-// ===================== HAND STRIP =====================
+// ===================== HAND =====================
 function renderHand() {
   const container = document.getElementById('hand-container-v2');
   document.getElementById('hand-count').textContent = `(${state.myHand.length})`;
 
+  // Which cards are in the selected suit (for dimming others)
+  const suitCards = state.askSuit
+    ? (HALF_SUITS.find(h => h.id === state.askSuit)?.cards || [])
+    : null;
+
   container.innerHTML = state.myHand.map(card => {
     const red = cardRed(card);
-    const rank = cardRank(card);
-    const suit = cardSuit(card);
+    const rank = cardRank(card), suit = cardSuit(card);
     const isSelectedAsk = state.selectedCard === card;
-    const isInPanel = state.panelCards.includes(card);
-    const cls = ['hand-card-v2', red?'red':'black', isSelectedAsk?'selected':'', isInPanel?'in-panel':''].join(' ');
+    const isInPanel    = state.panelCards.includes(card);
+    const isDimmed     = suitCards && !suitCards.includes(card) && !isSelectedAsk;
+    const cls = ['hand-card-v2', red?'red':'black',
+      isSelectedAsk?'selected':'', isInPanel?'in-panel':'', isDimmed?'dimmed':''].join(' ');
     return `<div class="${cls}" onclick="handleCardClick('${card}')">
       <div class="rank-top">${rank}<span class="suit-small">${suit}</span></div>
       <div class="suit-center">${suit}</div>
@@ -415,11 +417,11 @@ function renderHand() {
 }
 
 function handleCardClick(card) {
-  if (state.scorePanelOpen) {
-    togglePanelCard(card);
-  } else {
-    selectCard(card);
-  }
+  if (state.rightPanelMode === 'score') { togglePanelCard(card); return; }
+  // In ask mode: only selectable if in the chosen suit (or no suit chosen yet)
+  const suitCards = state.askSuit ? (HALF_SUITS.find(h => h.id === state.askSuit)?.cards || []) : null;
+  if (suitCards && !suitCards.includes(card)) return;
+  selectCard(card);
 }
 
 // ===================== ACTION STRIP =====================
@@ -428,77 +430,129 @@ function renderActionStrip() {
   const myTurn = room && room.currentTurn === socket.id;
   const me = room && room.players.find(p => p.id === socket.id);
   const outOfCards = state.myHand.length === 0;
-
-  const askArea = document.getElementById('action-strip');
+  const askArea  = document.getElementById('action-strip');
   const passArea = document.getElementById('pass-area');
+  const hint     = document.getElementById('hand-strip-hint');
 
   if (!room || room.phase !== 'playing' || !me) {
-    askArea.style.display = 'none'; passArea.style.display = 'none'; return;
+    askArea.style.display = 'none'; passArea.style.display = 'none';
+    hint.textContent = ''; return;
   }
 
   if (myTurn && outOfCards) {
-    askArea.style.display = 'none';
-    passArea.style.display = 'flex';
+    askArea.style.display = 'none'; passArea.style.display = 'flex';
     renderPassTargets();
+    hint.textContent = '';
   } else if (myTurn) {
-    passArea.style.display = 'none';
-    askArea.style.display = 'flex';
-    const targetPlayer = state.selectedTarget && room.players.find(p=>p.id===state.selectedTarget);
+    passArea.style.display = 'none'; askArea.style.display = 'flex';
+    const targetPlayer = state.selectedTarget && room.players.find(p => p.id === state.selectedTarget);
     const hs = state.selectedCard && cardToHalfSuit(state.selectedCard);
-    document.getElementById('ask-summary').innerHTML =
-      state.selectedCard
-        ? `Asking <strong style="color:#fff">${targetPlayer?targetPlayer.name:'—'}</strong> for <strong style="color:#fff">${state.selectedCard}</strong>${hs?` <span style="color:#7a6a5a">(${hs.name})</span>`:''}`
-        : `<span style="color:#6a5a4a">Select a card from your hand, then click an opponent</span>`;
+    document.getElementById('ask-summary').innerHTML = state.selectedCard
+      ? `Asking <strong style="color:#fff">${targetPlayer ? targetPlayer.name : '—'}</strong> for <strong style="color:#fff">${state.selectedCard}</strong>${hs ? ` <span style="color:#7a6a5a">(${hs.name} ${hs.suit})</span>` : ''}`
+      : `<span style="color:#6a5a4a">Pick a suit → card → opponent</span>`;
     document.getElementById('ask-btn').disabled = !state.selectedCard || !state.selectedTarget;
-    document.getElementById('hand-strip-hint').textContent = 'Click a card, then click an opponent tile to ask';
+    hint.textContent = '';
   } else {
     askArea.style.display = 'none'; passArea.style.display = 'none';
-    document.getElementById('hand-strip-hint').textContent = state.scorePanelOpen
-      ? 'Click cards to add them to the discussion tray'
-      : 'Click cards to select them for discussion';
+    hint.textContent = state.rightPanelMode === 'score' ? 'Click cards to add to discussion tray' : '';
   }
 }
 
 function renderPassTargets() {
   const room = state.room;
   const me = room.players.find(p => p.id === socket.id);
-  const teammates = room.players.filter(p => p.team===me.team && p.id!==socket.id && p.connected);
+  const teammates = room.players.filter(p => p.team === me.team && p.id !== socket.id && p.connected);
   document.getElementById('pass-targets').innerHTML = teammates.map(p =>
     `<button class="secondary" style="padding:4px 12px;font-size:12px" onclick="passTurn('${p.id}')">${isImg(p.icon)?'':p.icon} ${p.name}</button>`
   ).join('');
 }
 
-// ===================== SCORE PANEL =====================
-function toggleScorePanel() {
-  state.scorePanelOpen = !state.scorePanelOpen;
-  document.getElementById('score-panel').classList.toggle('hidden', !state.scorePanelOpen);
-  if (state.scorePanelOpen) {
-    state.selectedCard = null; state.selectedTarget = null;
-    renderHand(); renderActionStrip();
-    document.getElementById('hand-strip-hint').textContent = 'Click cards to add them to the discussion tray';
-  } else {
-    document.getElementById('hand-strip-hint').textContent = 'Click a card to select it, then click an opponent to ask';
-    renderHand();
-  }
-  renderScorePanel();
+// ===================== RIGHT PANEL =====================
+function showRightPanel(mode) {
+  state.rightPanelMode = mode;
+  renderRightPanel();
 }
 
+function renderRightPanel() {
+  const room = state.room; if (!room) return;
+  const myTurn = room.currentTurn === socket.id && room.phase === 'playing';
+
+  // Auto-switch to ask panel when it's my turn (unless user manually chose score)
+  // Only auto-switch when it BECOMES my turn (handled in renderAll via room_update)
+  const mode = state.rightPanelMode;
+
+  document.getElementById('rp-ask').classList.toggle('hidden', mode !== 'ask');
+  document.getElementById('rp-score').classList.toggle('hidden', mode !== 'score');
+
+  // Show "◂ Ask" back button only if it's my turn and I'm viewing score
+  const backBtn = document.getElementById('rp-back-ask');
+  if (backBtn) backBtn.style.display = (myTurn && mode === 'score') ? '' : 'none';
+
+  if (mode === 'ask') renderAskPanel();
+  else renderScorePanel();
+}
+
+function renderAskPanel() {
+  const room = state.room; if (!room) return;
+  const myTurn = room.currentTurn === socket.id && room.phase === 'playing';
+  const claimed = new Set(room.claimedSuits.map(s => s.id));
+  const list = document.getElementById('ask-suit-list');
+
+  if (!myTurn) {
+    list.innerHTML = `<div style="padding:20px 0;text-align:center;color:#6a5a4a;font-size:13px;font-weight:700">
+      Waiting for your turn…</div>`;
+    return;
+  }
+
+  const askable = HALF_SUITS.filter(hs =>
+    !claimed.has(hs.id) && hs.cards.some(c => state.myHand.includes(c))
+  );
+
+  if (askable.length === 0) {
+    list.innerHTML = `<div style="padding:20px 0;text-align:center;color:#6a5a4a;font-size:13px;font-weight:700">
+      No suits available to ask about</div>`;
+    return;
+  }
+
+  list.innerHTML = askable.map(hs => {
+    const sel = state.askSuit === hs.id;
+    return `<button class="ask-suit-btn ${sel ? 'selected' : ''}" onclick="selectAskSuit('${hs.id}')">
+      <span>${hs.name}</span>
+      <span class="suit-sym ${hs.red ? 'red' : 'black'}">${hs.suit}</span>
+    </button>`;
+  }).join('');
+}
+
+function selectAskSuit(id) {
+  state.askSuit = state.askSuit === id ? null : id;
+  // Clear card selection if it's no longer in the new suit
+  if (state.selectedCard && state.askSuit) {
+    const hs = HALF_SUITS.find(h => h.id === state.askSuit);
+    if (hs && !hs.cards.includes(state.selectedCard)) {
+      state.selectedCard = null;
+      state.selectedTarget = null;
+    }
+  }
+  renderAskPanel();
+  renderHand();
+  renderActionStrip();
+  renderOvalPlayers();
+}
+
+// ===================== SCORE PANEL =====================
 function renderScorePanel() {
   const room = state.room; if (!room) return;
   document.getElementById('panel-score-t1').textContent = room.scores.team1;
   document.getElementById('panel-score-t2').textContent = room.scores.team2;
-  document.getElementById('panel-score-mid').textContent = room.claimedSuits.filter(s=>s.winner===0).length;
-
-  // Won suits per team
-  const won1 = room.claimedSuits.filter(s=>s.winner===1);
-  const won2 = room.claimedSuits.filter(s=>s.winner===2);
+  document.getElementById('panel-score-mid').textContent = room.claimedSuits.filter(s => s.winner === 0).length;
+  const won1 = room.claimedSuits.filter(s => s.winner === 1);
+  const won2 = room.claimedSuits.filter(s => s.winner === 2);
   document.getElementById('won-t1').innerHTML = won1.length
-    ? won1.map(s=>`<span class="won-suit-badge t1">${s.name}</span>`).join('')
+    ? won1.map(s => `<span class="won-suit-badge t1">${s.name}</span>`).join('')
     : '<span style="font-size:12px;color:#4a3a2a;font-weight:600">—</span>';
   document.getElementById('won-t2').innerHTML = won2.length
-    ? won2.map(s=>`<span class="won-suit-badge t2">${s.name}</span>`).join('')
+    ? won2.map(s => `<span class="won-suit-badge t2">${s.name}</span>`).join('')
     : '<span style="font-size:12px;color:#4a3a2a;font-weight:600">—</span>';
-
   renderPanelTray();
   renderPanelSuits();
 }
@@ -506,13 +560,10 @@ function renderScorePanel() {
 function renderPanelTray() {
   const tray = document.getElementById('panel-tray');
   const hint = document.getElementById('panel-tray-hint');
-  if (state.panelCards.length === 0) {
-    tray.innerHTML = ''; tray.appendChild(hint); return;
-  }
+  if (state.panelCards.length === 0) { tray.innerHTML = ''; tray.appendChild(hint); return; }
   hint.remove();
   tray.innerHTML = state.panelCards.map(card => {
-    const red = cardRed(card);
-    const rank = cardRank(card), suit = cardSuit(card);
+    const red = cardRed(card); const rank = cardRank(card), suit = cardSuit(card);
     return `<div class="card-face ${red?'red':'black'}" style="width:44px;height:62px;padding:3px 4px;cursor:pointer" onclick="togglePanelCard('${card}')">
       <div class="rank-top" style="font-size:11px">${rank}<span class="suit-small" style="font-size:9px">${suit}</span></div>
       <div class="suit-center" style="font-size:20px">${suit}</div>
@@ -526,44 +577,103 @@ function renderPanelSuits() {
   const isAdmin = room && room.adminId === socket.id;
   const claimedMap = {};
   room.claimedSuits.forEach(s => claimedMap[s.id] = s);
-  const list = document.getElementById('panel-suits-list');
-  list.innerHTML = HALF_SUITS.map(hs => {
-    const award = claimedMap[hs.id];
-    const done = !!award;
+  document.getElementById('panel-suits-list').innerHTML = HALF_SUITS.map(hs => {
+    const award = claimedMap[hs.id]; const done = !!award;
     const winnerEl = award
-      ? `<span class="psw ${award.winner===1?'w1':award.winner===2?'w2':'wm'}">${award.winner===0?'Middle':`Team ${award.winner}`}</span>`
+      ? `<span class="psw ${award.winner===1?'w1':award.winner===2?'w2':'wm'}">${award.winner===0?'Middle':`T${award.winner}`}</span>`
       : '';
     const btns = isAdmin && !done
       ? `<span class="award-btns">
            <button class="ab1" onclick="awardSuit('${hs.id}',1)">T1</button>
            <button class="abm" onclick="awardSuit('${hs.id}',0)">Mid</button>
            <button class="ab2" onclick="awardSuit('${hs.id}',2)">T2</button>
-         </span>`
-      : '';
+         </span>` : '';
     return `<div class="panel-suit-row ${done?'claimed':''}">
-      <span class="psn">${hs.name}</span>${winnerEl}${btns}
-    </div>`;
+      <span class="psn">${hs.name} ${hs.suit}</span>${winnerEl}${btns}</div>`;
   }).join('');
 }
 
 function togglePanelCard(card) {
   const idx = state.panelCards.indexOf(card);
-  if (idx>=0) state.panelCards.splice(idx,1); else state.panelCards.push(card);
+  if (idx >= 0) state.panelCards.splice(idx, 1); else state.panelCards.push(card);
   renderHand(); renderPanelTray();
 }
-function clearSelectedCards() {
-  state.panelCards = []; renderHand(); renderPanelTray();
-}
+function clearSelectedCards() { state.panelCards = []; renderHand(); renderPanelTray(); }
 function awardSuit(halfSuitId, winner) {
-  socket.emit('award_suit', { halfSuitId, winner }, (res) => {
-    if (!res.ok) alert(res.error||'Could not award suit');
-  });
+  socket.emit('award_suit', { halfSuitId, winner }, (res) => { if (!res.ok) alert(res.error || 'Could not award suit'); });
+}
+
+// ===================== EVENT OVERLAY =====================
+function buildCardFaceHTML(card, size = 'sm') {
+  const red = cardRed(card); const rank = cardRank(card); const suit = cardSuit(card);
+  const w = size === 'lg' ? '80px' : '58px';
+  const h = size === 'lg' ? '112px' : '82px';
+  const fs = size === 'lg' ? '36px' : '26px';
+  const rfs = size === 'lg' ? '18px' : '13px';
+  return `<div class="card-face ${red?'red':'black'}" style="width:${w};height:${h};flex-shrink:0">
+    <div class="rank-top" style="font-size:${rfs}">${rank}<span class="suit-small" style="font-size:calc(${rfs} - 2px)">${suit}</span></div>
+    <div class="suit-center" style="font-size:${fs}">${suit}</div>
+    <div class="rank-bottom" style="font-size:${rfs}">${rank}</div>
+  </div>`;
+}
+
+function showEventOverlay({ askerId, askerName, targetId, targetName, card, hadCard }) {
+  const me = socket.id;
+  const askerLabel = askerId === me ? `${askerName} (you)` : askerName;
+  const targetLabel = targetId === me ? `${targetName} (you)` : targetName;
+
+  const overlay = document.getElementById('event-overlay');
+  const box     = document.getElementById('event-box');
+  const cardEl  = document.getElementById('event-card-el');
+  const names   = document.getElementById('event-names');
+  const msgEl   = document.getElementById('event-msg');
+  const symEl   = document.getElementById('event-sym');
+
+  // Clear any running timer
+  if (eventOverlayTimer) { clearTimeout(eventOverlayTimer); eventOverlayTimer = null; }
+
+  // Phase 1: question
+  cardEl.innerHTML = buildCardFaceHTML(card, 'lg');
+  names.textContent = `${askerLabel} → ${targetLabel}`;
+  msgEl.textContent = `asked for the ${card}`;
+  symEl.textContent = '?';
+  box.className = '';
+  overlay.classList.remove('hidden');
+  overlay.classList.add('show');
+
+  // Phase 2: result after 1.4s
+  eventOverlayTimer = setTimeout(() => {
+    if (hadCard) {
+      box.classList.add('got-it');
+      msgEl.textContent = `✓ ${targetLabel} had the ${card}!`;
+      symEl.textContent = '!';
+      // Flip animation on target's stack
+      const stackEl = document.getElementById(`stack-${targetId}`);
+      if (stackEl) {
+        stackEl.classList.remove('card-flip-anim');
+        void stackEl.offsetWidth; // reflow to restart
+        stackEl.classList.add('card-flip-anim');
+      }
+    } else {
+      box.classList.add('no-card');
+      msgEl.textContent = `✗ ${targetLabel} doesn't have it`;
+      symEl.textContent = '✕';
+    }
+
+    // Phase 3: dismiss after 2.2s
+    eventOverlayTimer = setTimeout(() => {
+      overlay.classList.add('hidden');
+      overlay.classList.remove('show');
+      box.className = '';
+      eventOverlayTimer = null;
+    }, 2200);
+  }, 1400);
 }
 
 // ===================== CARD ACTIONS =====================
 function selectCard(card) {
   state.selectedCard = state.selectedCard === card ? null : card;
-  state.selectedTarget = null;
+  if (!state.selectedCard) state.selectedTarget = null;
   renderHand(); renderOvalPlayers(); renderActionStrip();
 }
 
@@ -584,15 +694,25 @@ function clearAsk() {
 function submitAsk() {
   if (!state.selectedCard || !state.selectedTarget) return;
   socket.emit('ask_card', { targetId: state.selectedTarget, card: state.selectedCard }, (res) => {
-    if (!res.ok) { alert(res.error||'Cannot ask'); return; }
+    if (!res.ok) { alert(res.error || 'Cannot ask'); return; }
+    // Reset ask state after asking
+    state.askSuit = null;
     clearAsk();
+    // Re-render ask panel for the new turn state
+    renderRightPanel();
   });
 }
 
 function passTurn(toPlayerId) {
-  socket.emit('pass_turn', { toPlayerId }, (res) => {
-    if (!res.ok) alert(res.error||'Cannot pass');
-  });
+  socket.emit('pass_turn', { toPlayerId }, (res) => { if (!res.ok) alert(res.error || 'Cannot pass'); });
+}
+
+// When it becomes my turn, auto-switch right panel to ASK mode
+function handleTurnChange(room) {
+  if (room.currentTurn === socket.id) {
+    state.askSuit = null;
+    state.rightPanelMode = 'ask';
+  }
 }
 
 // ===================== SETTINGS =====================
@@ -604,7 +724,7 @@ function renderSettings() {
   document.getElementById('settings-view').innerHTML = `
     <div class="toggle-row"><div class="toggle-label">Players<span class="sub">${s.numPlayers} players</span></div></div>
     <div class="toggle-row">
-      <div class="toggle-label">Turn time limit<span class="sub">${s.timerEnabled?s.timerSeconds+'s per turn':'Off'}</span></div>
+      <div class="toggle-label">Turn time limit<span class="sub">${s.timerEnabled ? s.timerSeconds+'s per turn' : 'Off'}</span></div>
       ${isAdmin&&room.phase==='lobby'?`<label class="toggle"><input type="checkbox" ${s.timerEnabled?'checked':''} onchange="updateSetting('timerEnabled',this.checked)"><span class="toggle-slider"></span></label>`:''}
     </div>
     <div class="toggle-row">
@@ -619,7 +739,17 @@ function renderSettings() {
       <div class="toggle-label">Game code<span class="sub" style="font-family:monospace;font-size:18px;letter-spacing:5px;color:#3a6bc4">${room.code}</span></div>
     </div>`;
 }
-function updateSetting(key, value) { socket.emit('update_settings', { [key]: value }, ()=>{}); }
+function updateSetting(key, value) { socket.emit('update_settings', { [key]: value }, () => {}); }
+
+// ===================== RENDER ALL =====================
+function renderAll() {
+  updateNav();
+  const room = state.room; if (!room) return;
+  handleTurnChange(room);
+  if (!document.getElementById('tab-lobby').classList.contains('hidden')) renderLobby();
+  if (!document.getElementById('tab-game').classList.contains('hidden'))  renderGameTab();
+  if (!document.getElementById('tab-settings').classList.contains('hidden')) renderSettings();
+}
 
 // ===================== CHAT =====================
 function sendChat() {
@@ -631,7 +761,7 @@ function appendChat(msg) {
   const box = document.getElementById('chat-box');
   const d = document.createElement('div'); d.className = 'chat-msg';
   d.innerHTML = `
-    <div class="chat-icon">${isImg(msg.icon)?`<img src="${msg.icon}" style="width:28px;height:28px;border-radius:50%;object-fit:cover">`:msg.icon}</div>
+    <div class="chat-icon">${isImg(msg.icon) ? `<img src="${msg.icon}" style="width:28px;height:28px;border-radius:50%;object-fit:cover">` : msg.icon}</div>
     <div class="chat-bubble"><div class="chat-sender">${msg.name}</div>${escHtml(msg.text)}</div>`;
   box.appendChild(d); box.scrollTop = box.scrollHeight;
 }
@@ -641,18 +771,14 @@ function exitGame() {
   if (!confirm('Are you sure you want to exit the game?')) return;
   socket.emit('exit_game', {}, () => { goHome(); });
 }
-
 function goHome() {
   localStorage.removeItem('fish_session');
-  state.room = null;
-  state.myHand = [];
-  state.inCreateFlow = false;
-  state.selectedCard = null;
-  state.selectedTarget = null;
-  state.panelCards = [];
-  state.scorePanelOpen = false;
+  if (eventOverlayTimer) { clearTimeout(eventOverlayTimer); eventOverlayTimer = null; }
+  state.room = null; state.myHand = []; state.inCreateFlow = false;
+  state.selectedCard = null; state.selectedTarget = null;
+  state.panelCards = []; state.askSuit = null; state.rightPanelMode = 'ask';
   document.getElementById('exit-modal').classList.add('hidden');
-  document.getElementById('score-panel').classList.add('hidden');
+  document.getElementById('event-overlay').classList.add('hidden');
   document.getElementById('nav').classList.add('hidden');
   showPage('landing');
 }
@@ -660,4 +786,4 @@ function goHome() {
 // ===================== UTILS =====================
 function isImg(icon) { return icon && icon.startsWith('data:'); }
 function escHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-function playerInline(p) { return `${isImg(p.icon)?'':p.icon} ${p.name}`; }
+function playerInline(p) { return `${isImg(p.icon) ? '' : p.icon} ${p.name}`; }

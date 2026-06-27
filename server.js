@@ -236,11 +236,17 @@ io.on('connection', (socket) => {
       addLog(room, `${asker.name} asked ${target.name} for ${card} — YES! ${asker.name} goes again.`);
       io.to(asker.id).emit('your_hand', asker.hand);
       io.to(target.id).emit('your_hand', target.hand);
-      // asker goes again
     } else {
       addLog(room, `${asker.name} asked ${target.name} for ${card} — No. ${target.name}'s turn.`);
       nextTurn(room, targetId);
     }
+
+    // Broadcast ask result to all players for the animated overlay
+    io.to(code).emit('ask_result', {
+      askerId: asker.id, askerName: asker.name, askerIcon: asker.icon,
+      targetId: target.id, targetName: target.name, targetIcon: target.icon,
+      card, hadCard: hasCard,
+    });
 
     io.to(code).emit('room_update', publicRoom(room));
     cb({ ok: true, hadCard: hasCard });
