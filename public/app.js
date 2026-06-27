@@ -342,7 +342,7 @@ function renderTurnBanner() {
   if (room.phase !== 'playing' || !current) { banner.className = ''; return; }
   const mine = current.id === socket.id;
   banner.className = 'show ' + (mine ? 'mine' : 'other');
-  banner.textContent = mine ? '🎯 Your turn!' : `${current.name}'s turn`;
+  banner.textContent = mine ? 'Your turn' : `${current.name}'s turn`;
 }
 
 // ===================== OVAL PLAYERS =====================
