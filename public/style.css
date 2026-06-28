@@ -979,19 +979,17 @@ label { display: block; font-size: 13px; color: var(--text-muted); margin-bottom
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding-top: 22px;
+  padding-top: 14px;
 }
 
+/* Fan pokes out from the right side of the avatar, behind it */
 .card-fan {
   position: absolute;
-  top: 0;
-  left: 50%;
-  transform: translateX(-50%);
+  top: 34px;
+  left: calc(50% + 22px);
   width: 0; height: 0;
+  z-index: 1; /* behind avatar (z-index 2) */
 }
-
-/* Avatar overlaps the bottom of the fan */
-.player-fan-root .player-avatar-wrap { margin-top: -10px; }
 
 .card-fan-card {
   position: absolute;
