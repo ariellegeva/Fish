@@ -9,8 +9,17 @@ function getAudioCtx() {
   return _audioCtx;
 }
 
+let soundEnabled = true;
+function toggleSound() {
+  soundEnabled = !soundEnabled;
+  const el = document.getElementById('nav-sound');
+  if (el) el.textContent = soundEnabled ? '🔊' : '🔇';
+  try { localStorage.setItem('fish_sound', soundEnabled ? '1' : '0'); } catch {}
+}
+
 // Play a sequence of notes. Each note: { f: freq, t: startSec, d: durSec, type, gain }
 function playNotes(notes, masterGain = 0.18) {
+  if (!soundEnabled) return;
   const ctx = getAudioCtx();
   if (!ctx) return;
   const now = ctx.currentTime;
@@ -115,6 +124,7 @@ let eventOverlayTimer = null;
 
 // ===================== INIT =====================
 window.addEventListener('DOMContentLoaded', () => {
+  try { if (localStorage.getItem('fish_sound') === '0') { soundEnabled = false; const el = document.getElementById('nav-sound'); if (el) el.textContent = '🔇'; } } catch {}
   buildAvatarGrids();
   buildCountGrid();
   initSocket();
