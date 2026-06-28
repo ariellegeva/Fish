@@ -398,11 +398,7 @@ function renderOvalPlayers() {
     const isMe = p.id === socket.id;
 
     const cardCount = p.cardCount || 0;
-    const stackHTML = cardCount > 0
-      ? `<div id="stack-${p.id}" style="margin-top:2px;position:relative;display:inline-block">
-           <span class="card-stack-count" style="position:static;display:inline-flex;width:26px;height:26px;font-size:13px">${cardCount}</span>
-         </div>`
-      : `<div style="height:20px;font-size:11px;color:#9a8a7a;font-weight:700">no cards</div>`;
+    const stackHTML = buildCardFan(cardCount, p.id);
 
     const tile = document.createElement('div');
     tile.className = ['player-oval-tile', isCurrent?'current-turn':'', isClickable?'clickable':'',
@@ -416,14 +412,32 @@ function renderOvalPlayers() {
     }
 
     tile.innerHTML = `
-      <div class="player-avatar-wrap">
-        <div class="player-avatar-big avatar-t${p.team}">${isImg(p.icon) ? `<img src="${p.icon}">` : p.icon}</div>
-        ${p.id === room.adminId ? '<span class="admin-crown">👑</span>' : ''}
+      <div class="player-fan-root">
+        ${stackHTML}
+        <div class="player-avatar-wrap">
+          <div class="player-avatar-big avatar-t${p.team}">${isImg(p.icon) ? `<img src="${p.icon}">` : p.icon}</div>
+          ${p.id === room.adminId ? '<span class="admin-crown">👑</span>' : ''}
+        </div>
       </div>
-      <div class="player-oval-name">${p.name}${isMe ? ' (you)' : ''}</div>
-      ${stackHTML}`;
+      <div class="player-oval-name">${p.name}${isMe ? ' (you)' : ''}</div>`;
     container.appendChild(tile);
   });
+}
+
+// ===================== CARD FAN =====================
+function buildCardFan(count, playerId) {
+  if (count === 0) return `<div style="height:36px"></div>`;
+  const show = Math.min(count, 6);
+  // Spread angles: evenly across a range scaled by card count
+  const spread = [0, 0, 24, 36, 44, 50, 54][show];
+  const cards = Array.from({ length: show }, (_, i) => {
+    const angle = show === 1 ? 0 : -spread / 2 + (spread / (show - 1)) * i;
+    return `<div class="card-fan-card" style="transform:rotate(${angle}deg)"></div>`;
+  }).join('');
+  return `<div class="card-fan" id="stack-${playerId}">
+    ${cards}
+    <span class="card-stack-count">${count}</span>
+  </div>`;
 }
 
 // ===================== HAND =====================
