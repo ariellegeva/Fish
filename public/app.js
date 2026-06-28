@@ -118,6 +118,7 @@ let state = {
   lastAskResult: null,
   lastClaimResult: null, // persists until manually closed or next ask
   inCreateFlow: false,
+  maxPerTeam: 99,
 };
 
 let eventOverlayTimer = null;
@@ -146,6 +147,11 @@ function initSocket() {
   socket.on('room_update', (room) => {
     const wasPlaying = state.room && state.room.phase === 'playing';
     state.room = room;
+    // Live-update the team-selection table while peeking
+    if (!document.getElementById('page-join-team').classList.contains('hidden')) {
+      renderTeamTable();
+      return;
+    }
     if (!wasPlaying && room.phase === 'playing') {
       document.getElementById('nav').classList.remove('hidden');
       updateNav();
@@ -358,32 +364,48 @@ function joinWithCode() {
   document.getElementById('join-display-code').textContent = code;
   showPage('join-name');
 }
-function joinRoom(teamOverride) {
+function joinRoom() {
   const name = document.getElementById('join-name-input').value.trim();
   if (!name) return alert('Please enter your name.');
-  const icon = state.joinIcon;
   const code = state.pendingCode || getUrlCode();
   if (!code) return;
-  socket.emit('join_room', { code, name, icon, team: teamOverride || null }, (res) => {
+
+  // First check if team selection is on — peek without joining
+  socket.emit('peek_room', { code, name }, (res) => {
     if (!res.ok) { document.getElementById('join-error').textContent = res.error || 'Could not join.'; return; }
-    state.room = res.room; state.myHand = res.myHand || []; saveSession(code, name, icon);
-    if (res.room.settings.teamSelection && res.room.phase === 'lobby' && !teamOverride) {
+    state.maxPerTeam = res.maxPerTeam;
+    if (res.room.settings.teamSelection) {
+      // Show team page; don't join until they pick
+      state.room = res.room;
       showPage('join-team'); renderTeamTable();
     } else {
-      showPage('lobby'); updateNav(); renderLobby();
-      if (res.room.phase !== 'lobby') showTab('game');
+      // No team selection — join immediately (auto-assigned)
+      doJoin(null);
     }
   });
 }
-function joinTeam(team) {
+
+function doJoin(team) {
   const name = document.getElementById('join-name-input').value.trim();
+  const icon = state.joinIcon;
   const code = state.pendingCode || getUrlCode();
-  socket.emit('join_room', { code, name, icon: state.joinIcon, team }, (res) => {
-    if (!res.ok) return alert(res.error || 'Could not join team.');
-    state.room = res.room; saveSession(code, name, state.joinIcon);
+  socket.emit('join_room', { code, name, icon, team: team || null }, (res) => {
+    if (!res.ok) {
+      const target = document.getElementById('join-error');
+      if (target && !document.getElementById('page-join-name').classList.contains('hidden')) target.textContent = res.error;
+      else alert(res.error || 'Could not join.');
+      return;
+    }
+    state.room = res.room; state.myHand = res.myHand || []; saveSession(code, name, icon);
     showPage('lobby'); updateNav(); renderLobby();
+    if (res.room.phase !== 'lobby') showTab('game');
   });
 }
+
+function joinTeam(team) {
+  doJoin(team);
+}
+
 function renderTeamTable() {
   const room = state.room; if (!room) return;
   const t1 = room.players.filter(p => p.team === 1), t2 = room.players.filter(p => p.team === 2);
@@ -394,6 +416,12 @@ function renderTeamTable() {
     tr.innerHTML = `<td>${t1[i] ? playerInline(t1[i]) : ''}</td><td>${t2[i] ? playerInline(t2[i]) : ''}</td>`;
     tbody.appendChild(tr);
   }
+  // Disable full teams
+  const max = state.maxPerTeam || 99;
+  const b1 = document.getElementById('join-team-1-btn');
+  const b2 = document.getElementById('join-team-2-btn');
+  if (b1) { b1.disabled = t1.length >= max; b1.textContent = t1.length >= max ? 'Team 1 full' : 'Join Team 1'; }
+  if (b2) { b2.disabled = t2.length >= max; b2.textContent = t2.length >= max ? 'Team 2 full' : 'Join Team 2'; }
 }
 
 // ===================== LOBBY =====================

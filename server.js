@@ -170,6 +170,19 @@ io.on('connection', (socket) => {
     cb({ ok: true, code, room: publicRoom(rooms[code]), myHand: [] });
   });
 
+  // --- Peek at a room without joining (for team-selection page) ---
+  socket.on('peek_room', ({ code, name }, cb) => {
+    const room = rooms[code];
+    if (!room) return cb({ ok: false, error: 'Room not found' });
+    if (room.phase !== 'lobby') return cb({ ok: false, error: 'Game already started' });
+    if (room.players.length >= room.settings.numPlayers) return cb({ ok: false, error: 'Room full' });
+    if (room.players.find(p => p.name.toLowerCase() === name.toLowerCase()))
+      return cb({ ok: false, error: 'That name is already taken — choose another.' });
+    socket.join(code);
+    socket.data = { code, peeking: true };
+    cb({ ok: true, room: publicRoom(room), maxPerTeam: Math.ceil(room.settings.numPlayers / 2) });
+  });
+
   // --- Player joins room ---
   socket.on('join_room', ({ code, name, icon, team }, cb) => {
     const room = rooms[code];
@@ -187,10 +200,16 @@ io.on('connection', (socket) => {
       }
       return cb({ ok: false, error: 'Game already started' });
     }
+    const maxPerTeam = Math.ceil(room.settings.numPlayers / 2);
+
     // If this socket already has a player in the room, treat as a team change
     const mine = room.players.find(p => p.id === socket.id);
     if (mine) {
-      if (team) mine.team = team;
+      if (team && team !== mine.team) {
+        const teamCount = room.players.filter(p => p.team === team && p.id !== socket.id).length;
+        if (teamCount >= maxPerTeam) return cb({ ok: false, error: `Team ${team} is full.` });
+        mine.team = team;
+      }
       io.to(code).emit('room_update', publicRoom(room));
       return cb({ ok: true, room: publicRoom(room), myHand: mine.hand || [] });
     }
@@ -207,6 +226,11 @@ io.on('connection', (socket) => {
       assignedTeam = t1 <= t2 ? 1 : 2;
     } else if (!assignedTeam) {
       assignedTeam = 1; // default until they pick
+    }
+    // Enforce team cap on explicit team choice
+    if (team) {
+      const teamCount = room.players.filter(p => p.team === team).length;
+      if (teamCount >= maxPerTeam) return cb({ ok: false, error: `Team ${team} is full.` });
     }
 
     const player = { id: socket.id, name, icon, team: assignedTeam, hand: [], connected: true };
