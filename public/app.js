@@ -267,7 +267,14 @@ function createRoom() {
   });
 }
 function copyLink() {
-  if (state.room) navigator.clipboard.writeText(`${location.origin}?code=${state.room.code}`);
+  if (!state.room) return;
+  navigator.clipboard.writeText(`${location.origin}?code=${state.room.code}`);
+  const btn = document.getElementById('copy-btn');
+  if (btn) {
+    btn.textContent = 'Copied!';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 1500);
+  }
 }
 
 // ===================== JOIN FLOW =====================
