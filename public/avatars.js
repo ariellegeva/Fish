@@ -45,9 +45,20 @@ try {
   if (Style && Avatar) {
     // v10 API
     console.log('[avatars] Using v10 API (Style + Avatar)');
-    const res = await fetch('https://cdn.jsdelivr.net/npm/@dicebear/styles/miniavs.min.json');
-    if (!res.ok) throw new Error(`miniavs.min.json fetch failed: ${res.status}`);
-    const definition = await res.json();
+    // Try multiple CDN paths for the miniavs style definition
+    const jsonUrls = [
+      'https://unpkg.com/@dicebear/styles/miniavs.json',
+      'https://unpkg.com/@dicebear/styles/miniavs.min.json',
+      'https://cdn.jsdelivr.net/npm/@dicebear/styles/miniavs.json',
+      'https://cdn.jsdelivr.net/npm/@dicebear/styles/miniavs.min.json',
+    ];
+    let definition = null;
+    for (const url of jsonUrls) {
+      const r = await fetch(url);
+      console.log('[avatars] Trying', url, '→', r.status);
+      if (r.ok) { definition = await r.json(); break; }
+    }
+    if (!definition) throw new Error('Could not load miniavs definition from any CDN');
     const style = new Style(definition);
     window.DICEBEAR_AVATARS = SEEDS.map(seed => {
       const svg = new Avatar(style, { ...OPTIONS, seed }).toString();
