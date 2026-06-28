@@ -263,6 +263,7 @@ io.on('connection', (socket) => {
     if (asker.hand.length > 0) return cb({ ok: false, error: 'Can only pass when out of cards' });
     addLog(room, `${asker.name} passes their turn to ${to.name}.`);
     nextTurn(room, toPlayerId);
+    io.to(code).emit('pass_announced', { passerName: asker.name, targetName: to.name });
     io.to(code).emit('room_update', publicRoom(room));
     cb({ ok: true });
   });

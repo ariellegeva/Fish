@@ -104,6 +104,11 @@ function initSocket() {
   socket.on('ask_result',   (data) => showEventOverlay(data));
   socket.on('claim_result', (data) => showClaimResultOverlay(data));
   socket.on('game_ended',   (data) => showWinOverlay(data));
+  socket.on('pass_announced', ({ passerName, targetName }) => {
+    // Hide pass modal, show brief notification
+    document.getElementById('pass-modal').classList.add('hidden');
+    showPassNotification(`${passerName} passed the turn to ${targetName}`);
+  });
 }
 
 function checkRestore() {
@@ -485,8 +490,8 @@ function renderActionStrip() {
   }
 
   if (myTurn && outOfCards) {
-    askArea.style.display = 'none'; passArea.style.display = 'block';
-    renderPassTargets();
+    askArea.style.display = 'none'; passArea.style.display = 'none';
+    checkOutOfCardsState(room, me);
   } else if (myTurn) {
     passArea.style.display = 'none'; askArea.style.display = 'flex'; askArea.style.flexDirection = 'column';
     const targetPlayer = state.selectedTarget && room.players.find(p => p.id === state.selectedTarget);
@@ -498,7 +503,77 @@ function renderActionStrip() {
     document.getElementById('ask-btn').disabled = !state.selectedCard || !state.selectedTarget;
   } else {
     askArea.style.display = 'none'; passArea.style.display = 'none';
+    document.getElementById('pass-modal').classList.add('hidden');
+    document.getElementById('must-claim-modal').classList.add('hidden');
+    document.getElementById('right-panel').classList.remove('ask-disabled');
   }
+}
+
+function checkOutOfCardsState(room, me) {
+  const teammates = room.players.filter(p =>
+    p.team === me.team && p.id !== socket.id && p.connected && p.cardCount > 0
+  );
+  const teamColor = me.team === 1 ? 'Blue' : 'Pink';
+  const oppColor  = me.team === 1 ? 'Pink' : 'Blue';
+
+  if (teammates.length > 0) {
+    // Can pass — show pass modal
+    showPassModal(me, teammates, room);
+    document.getElementById('must-claim-modal').classList.add('hidden');
+    document.getElementById('right-panel').classList.remove('ask-disabled');
+  } else {
+    // No teammates with cards — must claim remaining suits
+    document.getElementById('pass-modal').classList.add('hidden');
+    const unclaimedCount = 8 - room.claimedSuits.length;
+    if (unclaimedCount > 0) {
+      const oppHasCards = room.players.some(p => p.team !== me.team && p.cardCount > 0);
+      const claimingTeam = oppHasCards ? oppColor : teamColor;
+      document.getElementById('must-claim-msg').textContent =
+        `${claimingTeam} team must claim all remaining suits`;
+      document.getElementById('must-claim-modal').classList.remove('hidden');
+      document.getElementById('right-panel').classList.add('ask-disabled');
+      // Auto-switch to claim tab
+      showRightPanel('claim');
+    }
+  }
+}
+
+function showPassModal(me, teammates, room) {
+  const modal = document.getElementById('pass-modal');
+  if (!modal.classList.contains('hidden')) return; // already shown
+  document.getElementById('pass-modal-msg').textContent =
+    `${me.name} should select a teammate to pass the turn to`;
+  const targets = document.getElementById('pass-modal-targets');
+  targets.innerHTML = teammates.map(p => {
+    const avatarHtml = isImg(p.icon)
+      ? `<img src="${p.icon}">`
+      : `<span>${p.icon}</span>`;
+    return `<button onclick="doPassTurn('${p.id}')">
+      <div class="pass-target-avatar avatar-t${p.team}">${avatarHtml}</div>
+      <span>${p.name}</span>
+    </button>`;
+  }).join('');
+  modal.classList.remove('hidden');
+}
+
+function doPassTurn(toPlayerId) {
+  socket.emit('pass_turn', { toPlayerId }, (res) => {
+    if (!res.ok) alert(res.error || 'Cannot pass');
+    // Modal will be hidden by pass_announced event
+  });
+}
+
+let passNotifTimer = null;
+function showPassNotification(msg) {
+  const el = document.getElementById('must-claim-msg');
+  const modal = document.getElementById('must-claim-modal');
+  el.textContent = msg;
+  modal.classList.remove('hidden');
+  if (passNotifTimer) clearTimeout(passNotifTimer);
+  passNotifTimer = setTimeout(() => {
+    modal.classList.add('hidden');
+    passNotifTimer = null;
+  }, 3000);
 }
 
 function renderPassTargets() {

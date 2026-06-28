@@ -363,6 +363,63 @@ label { display: block; font-size: 13px; color: var(--text-muted); margin-bottom
 }
 .card-flip-anim .card-back { animation: card-flip .7s ease-in-out; }
 
+/* ===== PASS MODAL ===== */
+#pass-modal {
+  position: fixed;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 250;
+  background: var(--surface);
+  border: 2.5px solid var(--border);
+  border-radius: 18px;
+  padding: 28px 32px;
+  text-align: center;
+  box-shadow: 0 8px 32px rgba(0,0,0,.25);
+  width: min(400px, 88%);
+  font-family: 'Nunito', sans-serif;
+}
+#pass-modal-msg {
+  font-size: 16px; font-weight: 700; color: var(--text);
+  margin-bottom: 20px; line-height: 1.4;
+}
+#pass-modal-targets {
+  display: flex; flex-wrap: wrap; gap: 10px; justify-content: center;
+}
+#pass-modal-targets button {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--surface); border: 2px solid var(--border);
+  border-radius: 50px; padding: 8px 18px;
+  font-size: 14px; font-weight: 800; cursor: pointer;
+  transition: all .15s;
+}
+#pass-modal-targets button:hover { background: var(--bg); transform: translateY(-1px); }
+.pass-target-avatar { width: 28px; height: 28px; border-radius: 50%; overflow: hidden; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+.pass-target-avatar img { width: 100%; height: 100%; object-fit: cover; }
+
+/* ===== MUST-CLAIM NOTIFICATION ===== */
+#must-claim-modal {
+  position: fixed;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 250;
+  pointer-events: none;
+}
+#must-claim-inner {
+  background: rgba(45,45,45,.92);
+  color: #fff;
+  font-family: 'Nunito', sans-serif;
+  font-size: 16px; font-weight: 800;
+  padding: 14px 28px;
+  border-radius: 50px;
+  text-align: center;
+  box-shadow: 0 4px 20px rgba(0,0,0,.3);
+  white-space: nowrap;
+}
+
+/* Gray out ASK tab when must-claim state */
+.ask-disabled .rp-tab#rp-tab-ask { opacity: .35; pointer-events: none; }
+.ask-disabled #rp-ask { opacity: .35; pointer-events: none; }
+
 /* ===== WIN OVERLAY ===== */
 #win-overlay {
   position: fixed; inset: 0; z-index: 300;
