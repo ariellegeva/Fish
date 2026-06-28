@@ -363,6 +363,65 @@ label { display: block; font-size: 13px; color: var(--text-muted); margin-bottom
 }
 .card-flip-anim .card-back { animation: card-flip .7s ease-in-out; }
 
+/* ===== WIN OVERLAY ===== */
+#win-overlay {
+  position: fixed; inset: 0; z-index: 300;
+  background: var(--bg);
+  display: flex; align-items: center; justify-content: center;
+  overflow-y: auto;
+  font-family: 'Nunito', sans-serif;
+}
+#win-inner {
+  max-width: 700px; width: 90%;
+  padding: 40px 32px 32px;
+  display: flex; flex-direction: column; align-items: center;
+  gap: 20px; position: relative;
+}
+#win-close {
+  position: absolute; top: 0; right: 0;
+  background: rgba(0,0,0,.08); border: none; color: var(--text-muted);
+  font-size: 13px; font-weight: 700; padding: 6px 14px;
+  border-radius: 20px; cursor: pointer;
+}
+#win-close:hover { background: rgba(0,0,0,.15); }
+#win-trophy { font-size: 64px; line-height: 1; }
+#win-winning-label {
+  font-size: 28px; font-weight: 900; color: var(--text);
+  letter-spacing: .02em; text-align: center;
+}
+#win-losing-label {
+  font-size: 18px; font-weight: 700; color: var(--text-muted);
+  text-align: center;
+}
+#win-tie-label {
+  font-size: 28px; font-weight: 900; color: var(--text); text-align: center;
+}
+.win-players-row {
+  display: flex; flex-wrap: wrap; gap: 20px;
+  justify-content: center; margin-top: 10px;
+}
+.win-player {
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+}
+.win-player-avatar {
+  width: 72px; height: 72px; border-radius: 50%;
+  overflow: hidden; display: flex; align-items: center; justify-content: center;
+  font-size: 36px;
+}
+.win-player-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.win-player-name { font-size: 15px; font-weight: 800; color: var(--text); }
+#win-divider {
+  width: 100%; border: none; border-top: 2px solid var(--border-light); margin: 4px 0;
+}
+#win-new-game-btn {
+  margin-top: 8px;
+  background: #4caf6e; border-color: #2d6a40;
+  font-size: 18px; font-weight: 900; padding: 14px 48px;
+  border-radius: 50px; box-shadow: 0 4px 0 #2d6a40;
+  letter-spacing: .02em;
+}
+#win-new-game-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 0 #2d6a40; }
+
 /* ===== CLAIM RESULT OVERLAY — full-screen fixed ===== */
 #claim-overlay {
   position: fixed;

@@ -274,6 +274,28 @@
   </div>
 </div>
 
+<!-- Full-screen game-end overlay -->
+<div id="win-overlay" class="hidden">
+  <div id="win-inner">
+    <button id="win-close" onclick="dismissWinOverlay()">✕ Close</button>
+    <div id="win-winning-section">
+      <div id="win-trophy">🏆</div>
+      <div id="win-winning-label">Winning team!</div>
+      <div id="win-winning-players"></div>
+    </div>
+    <hr id="win-divider">
+    <div id="win-losing-section">
+      <div id="win-losing-label">Better luck next time</div>
+      <div id="win-losing-players"></div>
+    </div>
+    <div id="win-tie-section" class="hidden">
+      <div id="win-tie-label">It's a tie!</div>
+      <div id="win-tie-players"></div>
+    </div>
+    <button id="win-new-game-btn" onclick="goHome()">New game</button>
+  </div>
+</div>
+
 <!-- Full-screen claim overlay (fixed, 92% opacity) -->
 <div id="claim-overlay" class="hidden">
   <div id="claim-overlay-inner">

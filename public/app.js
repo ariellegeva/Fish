@@ -103,6 +103,7 @@ function initSocket() {
 
   socket.on('ask_result',   (data) => showEventOverlay(data));
   socket.on('claim_result', (data) => showClaimResultOverlay(data));
+  socket.on('game_ended',   (data) => showWinOverlay(data));
 }
 
 function checkRestore() {
@@ -1078,6 +1079,45 @@ function appendChat(msg) {
   box.appendChild(d); box.scrollTop = box.scrollHeight;
 }
 
+// ===================== WIN OVERLAY =====================
+function showWinOverlay({ scores, players }) {
+  const t1 = scores.team1, t2 = scores.team2;
+  const winTeam = t1 > t2 ? 1 : t2 > t1 ? 2 : 0; // 0 = tie
+
+  const playerRow = (team) => players
+    .filter(p => p.team === team)
+    .map(p => `<div class="win-player">
+      <div class="win-player-avatar avatar-t${p.team}">
+        ${isImg(p.icon) ? `<img src="${p.icon}">` : p.icon}
+      </div>
+      <div class="win-player-name">${p.name}</div>
+    </div>`).join('');
+
+  if (winTeam === 0) {
+    // Tie
+    document.getElementById('win-winning-section').classList.add('hidden');
+    document.getElementById('win-losing-section').classList.add('hidden');
+    document.getElementById('win-tie-section').classList.remove('hidden');
+    document.getElementById('win-tie-players').innerHTML =
+      `<div class="win-players-row">${playerRow(1)}${playerRow(2)}</div>`;
+  } else {
+    const loseTeam = winTeam === 1 ? 2 : 1;
+    document.getElementById('win-winning-section').classList.remove('hidden');
+    document.getElementById('win-losing-section').classList.remove('hidden');
+    document.getElementById('win-tie-section').classList.add('hidden');
+    document.getElementById('win-winning-players').innerHTML =
+      `<div class="win-players-row">${playerRow(winTeam)}</div>`;
+    document.getElementById('win-losing-players').innerHTML =
+      `<div class="win-players-row">${playerRow(loseTeam)}</div>`;
+  }
+
+  document.getElementById('win-overlay').classList.remove('hidden');
+}
+
+function dismissWinOverlay() {
+  document.getElementById('win-overlay').classList.add('hidden');
+}
+
 // ===================== EXIT =====================
 function exitGame() {
   if (!confirm('Are you sure you want to exit the game?')) return;
@@ -1091,11 +1131,11 @@ function goHome() {
   state.panelCards = []; state.askSuit = null; state.rightPanelMode = 'ask';
   state.claimSuit = null; state.claimTeam = null; state.claimAssignments = {};
   state.scoreOverlayOpen = false; state.lastAskResult = null; state.lastClaimResult = null;
-  document.getElementById('score-overlay').classList.add('hidden');
+  document.getElementById('score-overlay')?.classList.add('hidden');
   document.getElementById('event-overlay').classList.add('hidden');
-  dismissClaimOverlay();
   document.getElementById('exit-modal').classList.add('hidden');
-  document.getElementById('event-overlay').classList.add('hidden');
+  document.getElementById('win-overlay').classList.add('hidden');
+  dismissClaimOverlay();
   document.getElementById('nav').classList.add('hidden');
   showPage('landing');
 }

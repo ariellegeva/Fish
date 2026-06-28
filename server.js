@@ -319,7 +319,12 @@ io.on('connection', (socket) => {
       addLog(room, `${claimer.name} correctly claimed ${hs.name}${hs.suit} for Team ${winner}!`);
     }
     room.claimedSuits.push({ id: hs.id, name: hs.name + hs.suit, winner });
-    checkGameEnd(room);
+    if (checkGameEnd(room)) {
+      io.to(code).emit('game_ended', {
+        scores: room.scores,
+        players: room.players.map(p => ({ id: p.id, name: p.name, icon: p.icon, team: p.team })),
+      });
+    }
 
     // Build what the claimer claimed (assignments grouped by player)
     const claimByPlayer = [];
@@ -371,7 +376,12 @@ io.on('connection', (socket) => {
       addLog(room, `${hs.name} goes to the middle (0 points).`);
     }
 
-    checkGameEnd(room);
+    if (checkGameEnd(room)) {
+      io.to(code).emit('game_ended', {
+        scores: room.scores,
+        players: room.players.map(p => ({ id: p.id, name: p.name, icon: p.icon, team: p.team })),
+      });
+    }
     io.to(code).emit('room_update', publicRoom(room));
     cb({ ok: true });
   });
