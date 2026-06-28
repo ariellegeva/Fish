@@ -848,6 +848,11 @@ function showEventOverlay({ askerId, askerName, targetId, targetName, card, hadC
 // ===================== CLAIM RESULT OVERLAY =====================
 function showClaimResultOverlay({ claimerName, suitName, suitSym, result, cardsByPlayer }) {
   state.lastClaimResult = { claimerName, suitName, suitSym, result, cardsByPlayer };
+  // Clear any active ask overlay
+  if (eventOverlayTimer) { clearTimeout(eventOverlayTimer); eventOverlayTimer = null; }
+  const eventEl = document.getElementById('event-overlay');
+  eventEl.classList.add('hidden'); eventEl.classList.remove('show');
+  document.getElementById('event-box').className = '';
 
   const labels = {
     correct:         'Correct!',
