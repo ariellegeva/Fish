@@ -369,7 +369,7 @@ label { display: block; font-size: 13px; color: var(--text-muted); margin-bottom
   pointer-events: auto;
   border-radius: 18px;
   padding: 20px 24px;
-  width: min(640px, 92%);
+  width: min(780px, 94%);
   box-shadow: 0 8px 32px rgba(0,0,0,.3);
   font-family: 'Nunito', sans-serif;
 }
@@ -413,6 +413,21 @@ label { display: block; font-size: 13px; color: var(--text-muted); margin-bottom
   min-width: 80px; flex-shrink: 0;
 }
 .claim-reveal-cards { display: flex; gap: 6px; flex-wrap: wrap; }
+
+/* Two-column claim layout */
+.claim-two-col {
+  display: flex; gap: 12px; align-items: flex-start;
+}
+.claim-col { flex: 1; min-width: 0; }
+.claim-col-title {
+  font-size: 11px; font-weight: 800; color: rgba(255,255,255,.65);
+  text-transform: uppercase; letter-spacing: .08em;
+  margin-bottom: 8px; padding-left: 4px;
+}
+.claim-col-divider {
+  width: 1.5px; background: rgba(255,255,255,.25);
+  align-self: stretch; flex-shrink: 0; border-radius: 2px;
+}
 
 /* ===== SCORE OVERLAY ===== */
 #score-overlay {

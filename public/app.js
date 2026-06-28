@@ -846,8 +846,8 @@ function showEventOverlay({ askerId, askerName, targetId, targetName, card, hadC
 }
 
 // ===================== CLAIM RESULT OVERLAY =====================
-function showClaimResultOverlay({ claimerName, suitName, suitSym, result, cardsByPlayer }) {
-  state.lastClaimResult = { claimerName, suitName, suitSym, result, cardsByPlayer };
+function showClaimResultOverlay({ claimerName, suitName, suitSym, result, cardsByPlayer, claimByPlayer }) {
+  state.lastClaimResult = { claimerName, suitName, suitSym, result, cardsByPlayer, claimByPlayer };
   // Clear any active ask overlay
   if (eventOverlayTimer) { clearTimeout(eventOverlayTimer); eventOverlayTimer = null; }
   const eventEl = document.getElementById('event-overlay');
@@ -869,17 +869,34 @@ function showClaimResultOverlay({ claimerName, suitName, suitSym, result, cardsB
   box.className = colorClass;
   title.textContent = `${claimerName} claimed ${suitName}${suitSym} — ${labels[result]}`;
 
-  rows.innerHTML = cardsByPlayer.map(({ playerName, playerIcon, cards, team }) => {
-    const avatarHtml = isImg(playerIcon)
-      ? `<img src="${playerIcon}">`
-      : `<span>${playerIcon}</span>`;
-    const cardHtml = cards.map(c => buildCardFaceHTML(c, 'sm')).join('');
-    return `<div class="claim-reveal-row">
-      <div class="claim-reveal-avatar avatar-t${team || ''}">${avatarHtml}</div>
-      <div class="claim-reveal-name">${playerName}</div>
-      <div class="claim-reveal-cards">${cardHtml}</div>
-    </div>`;
-  }).join('');
+  function playerRows(list) {
+    return list.map(({ playerName, playerIcon, cards, team }) => {
+      const avatarHtml = isImg(playerIcon) ? `<img src="${playerIcon}">` : `<span>${playerIcon}</span>`;
+      return `<div class="claim-reveal-row">
+        <div class="claim-reveal-avatar avatar-t${team || ''}">${avatarHtml}</div>
+        <div class="claim-reveal-name">${playerName}</div>
+        <div class="claim-reveal-cards">${cards.map(c => buildCardFaceHTML(c, 'sm')).join('')}</div>
+      </div>`;
+    }).join('');
+  }
+
+  if (result !== 'correct' && claimByPlayer && claimByPlayer.length > 0) {
+    // Two-column layout: claimed vs true
+    rows.innerHTML = `
+      <div class="claim-two-col">
+        <div class="claim-col">
+          <div class="claim-col-title">the claim</div>
+          ${playerRows(claimByPlayer)}
+        </div>
+        <div class="claim-col-divider"></div>
+        <div class="claim-col">
+          <div class="claim-col-title">the true distribution</div>
+          ${playerRows(cardsByPlayer)}
+        </div>
+      </div>`;
+  } else {
+    rows.innerHTML = playerRows(cardsByPlayer);
+  }
 
   overlay.classList.remove('hidden');
 }

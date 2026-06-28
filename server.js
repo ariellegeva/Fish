@@ -321,10 +321,23 @@ io.on('connection', (socket) => {
     room.claimedSuits.push({ id: hs.id, name: hs.name + hs.suit, winner });
     checkGameEnd(room);
 
+    // Build what the claimer claimed (assignments grouped by player)
+    const claimByPlayer = [];
+    for (const [card, playerId] of Object.entries(assignments)) {
+      const p = room.players.find(pl => pl.id === playerId);
+      if (!p) continue;
+      let entry = claimByPlayer.find(e => e.playerId === playerId);
+      if (!entry) {
+        entry = { playerId, playerName: p.name, playerIcon: p.icon, team: p.team, cards: [] };
+        claimByPlayer.push(entry);
+      }
+      entry.cards.push(card);
+    }
+
     io.to(code).emit('claim_result', {
       claimerName: claimer.name,
       suitName: hs.name, suitSym: hs.suit,
-      result, winner, cardsByPlayer,
+      result, winner, cardsByPlayer, claimByPlayer,
     });
 
     io.to(code).emit('room_update', publicRoom(room));
