@@ -518,18 +518,14 @@ function renderTurnState() {
   }
 
   const colorOf = (team) => team === 1 ? 'Blue' : 'Pink';
-  const t1HasCards = room.players.some(p => p.team === 1 && p.cardCount > 0);
-  const t2HasCards = room.players.some(p => p.team === 2 && p.cardCount > 0);
-  const suitsLeft = 8 - room.claimedSuits.length;
 
-  // Case A: exactly one team has cards, suits remain → that team must claim
-  if (suitsLeft > 0 && (t1HasCards !== t2HasCards)) {
-    const claimingTeam = t1HasCards ? 1 : 2;
+  // Case A: server has locked a claim-only team (set when one team first emptied)
+  if (room.claimOnlyTeam) {
+    const claimingTeam = room.claimOnlyTeam;
     passModal.classList.add('hidden');
     document.getElementById('must-claim-msg').textContent =
       `${colorOf(claimingTeam)} team must claim all remaining suits`;
     mustClaim.classList.remove('hidden');
-    // Disable ASK only if I'm on the team that must claim (or always — ASK is impossible anyway)
     rightPanel.classList.add('ask-disabled');
     const me = room.players.find(p => p.id === socket.id);
     if (me && me.team === claimingTeam && state.rightPanelMode === 'ask') showRightPanel('claim');

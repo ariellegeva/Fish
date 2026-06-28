@@ -93,8 +93,27 @@ function publicRoom(room) {
     currentTurn: room.currentTurn,
     scores: room.scores,
     claimedSuits: room.claimedSuits,
+    claimOnlyTeam: room.claimOnlyTeam || null,
     log: room.log,
   };
+}
+
+// When one team first runs out of cards (with suits remaining), lock the
+// "claim-only" phase to the team whose player has the turn at that moment.
+function updateClaimOnlyTeam(room) {
+  const suitsLeft = HALF_SUITS.length - room.claimedSuits.length;
+  const t1HasCards = room.players.some(p => p.team === 1 && (p.hand?.length || 0) > 0);
+  const t2HasCards = room.players.some(p => p.team === 2 && (p.hand?.length || 0) > 0);
+
+  if (suitsLeft > 0 && (t1HasCards !== t2HasCards)) {
+    if (!room.claimOnlyTeam) {
+      const current = room.players.find(p => p.id === room.currentTurn);
+      // Lock to the team whose turn it is right now
+      room.claimOnlyTeam = current ? current.team : (t1HasCards ? 1 : 2);
+    }
+  } else {
+    room.claimOnlyTeam = null;
+  }
 }
 
 function nextTurn(room, toPlayerId) {
@@ -248,6 +267,7 @@ io.on('connection', (socket) => {
       card, hadCard: hasCard,
     });
 
+    updateClaimOnlyTeam(room);
     io.to(code).emit('room_update', publicRoom(room));
     cb({ ok: true, hadCard: hasCard });
   });
@@ -346,6 +366,7 @@ io.on('connection', (socket) => {
       result, winner, cardsByPlayer, claimByPlayer,
     });
 
+    updateClaimOnlyTeam(room);
     io.to(code).emit('room_update', publicRoom(room));
     cb({ ok: true, result });
   });
@@ -383,6 +404,7 @@ io.on('connection', (socket) => {
         players: room.players.map(p => ({ id: p.id, name: p.name, icon: p.icon, team: p.team })),
       });
     }
+    updateClaimOnlyTeam(room);
     io.to(code).emit('room_update', publicRoom(room));
     cb({ ok: true });
   });
