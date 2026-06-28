@@ -1,10 +1,21 @@
 // ===================== CONSTANTS =====================
+// ── AVATAR CONFIG ──────────────────────────────────────────
+// 1. Go to dicebear.com/styles, open the Miniavs playground
+// 2. Customise components/probabilities until you're happy
+// 3. Copy the URL from the playground — remove the seed value
+//    and paste the remaining params into AVATAR_EXTRA_PARAMS below
+//    e.g. if the URL is: /miniavs/svg?seed=peet&blush=true&hair=1,2
+//    set AVATAR_EXTRA_PARAMS = '&blush=true&hair=1,2'
+// 4. Replace the seeds array with your chosen seeds
+const AVATAR_EXTRA_PARAMS = ''; // ← paste extra params here
 const AVATAR_SEEDS = [
-  'Tiger','Panda','Fox','Bear','Bunny','Cat','Dragon','Eagle',
-  'Frog','Lion','Owl','Phoenix','Shark','Turtle','Wolf','Zebra',
+  'n','Panda','Foxc','m','p','Cat','dragonk','c',
+  'fff','Lionl','nor','peet','spar','tell','Wolfy','Zebra',
   'Monkey','Penguin','Koala','Dolphin'
 ];
-const AVATAR_BASE = 'https://api.dicebear.com/9.x/miniavs/svg?seed=';
+// ───────────────────────────────────────────────────────────
+const AVATAR_BASE = 'https://api.dicebear.com/9.x/miniavs/svg';
+const avatarUrl = (seed) => `${AVATAR_BASE}?seed=${seed}${AVATAR_EXTRA_PARAMS}`;
 
 const HALF_SUITS = [
   { id: 'low_hearts',    name: 'Low',    suit: '♥', cards: ['2♥','3♥','4♥','5♥','6♥','7♥'],   red: true },
@@ -30,7 +41,7 @@ function cardToHalfSuit(card) { return HALF_SUITS.find(hs => hs.cards.includes(c
 // ===================== STATE =====================
 let socket;
 let state = {
-  adminIcon: AVATAR_BASE + 'Tiger', joinIcon: AVATAR_BASE + 'Tiger',
+  adminIcon: avatarUrl('Tiger'), joinIcon: avatarUrl('Tiger'),
   pendingCode: null,
   selectedCount: 6,
   room: null,
@@ -174,7 +185,7 @@ function buildAvatarGrids() {
   ['admin','join'].forEach(prefix => {
     const grid = document.getElementById(`${prefix}-emoji-grid`);
     AVATAR_SEEDS.forEach(seed => {
-      const url = AVATAR_BASE + seed;
+      const url = avatarUrl(seed);
       const d = document.createElement('div');
       d.className = 'emoji-opt avatar-opt';
       d.innerHTML = `<img src="${url}" alt="${seed}">`;
