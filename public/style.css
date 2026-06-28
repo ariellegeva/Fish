@@ -375,9 +375,9 @@ label { display: block; font-size: 13px; color: var(--text-muted); margin-bottom
   min-height: 100%;
   padding: 32px 40px;
 }
-#claim-overlay.co-correct { background: rgba(90,186,120,.92); }
-#claim-overlay.co-mid     { background: rgba(212,180,74,.92); }
-#claim-overlay.co-wrong   { background: rgba(217,112,96,.92); }
+#claim-overlay.co-correct { background: hsl(139, 52%, 59%,.96); }
+#claim-overlay.co-mid     { background: hsl(42, 100%, 69%,.96); }
+#claim-overlay.co-wrong   { background: hsl(351, 100%, 67%,.96); }
 
 #claim-overlay-header {
   display: flex; align-items: center; justify-content: space-between;
@@ -833,7 +833,7 @@ label { display: block; font-size: 13px; color: var(--text-muted); margin-bottom
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding-top: 36px; /* room for cards fanning above */
+  padding-top: 22px;
 }
 
 .card-fan {
@@ -841,12 +841,15 @@ label { display: block; font-size: 13px; color: var(--text-muted); margin-bottom
   top: 0;
   left: 50%;
   transform: translateX(-50%);
-  width: 0; height: 0; /* cards position from this anchor */
+  width: 0; height: 0;
 }
+
+/* Avatar overlaps the bottom of the fan */
+.player-fan-root .player-avatar-wrap { margin-top: -10px; }
 
 .card-fan-card {
   position: absolute;
-  bottom: -8px;
+  bottom: -4px;
   left: -16px; /* half of card width */
   width: 32px;
   height: 46px;
