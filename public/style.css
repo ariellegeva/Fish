@@ -306,22 +306,22 @@ label { display: block; font-size: 13px; color: var(--text-muted); margin-bottom
 }
 #event-box {
   pointer-events: auto;
-  width: 220px; height: 220px;
+  width: 320px; height: 320px;
   border-radius: 50%;
   background: #fff;
-  border: 4px solid #2d6a40;
-  box-shadow: 0 8px 32px rgba(0,0,0,.3);
+  border: none;
+  box-shadow: none;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   text-align: center;
-  padding: 20px;
+  padding: 28px;
   gap: 6px;
-  transition: background .35s, border-color .35s;
+  transition: background .35s;
 }
-#event-box.got-it  { background: #5aba78; border-color: #2d7040; }
-#event-box.no-card { background: #d97060; border-color: #8a3020; }
+#event-box.got-it  { background: #5aba78; }
+#event-box.no-card { background: #d97060; }
 
 #event-card-el .card-face { width: 48px; height: 68px; }
 #event-names { font-size: 10px; font-weight: 700; color: rgba(0,0,0,.4); font-family: 'Nunito', sans-serif; }
@@ -425,7 +425,7 @@ label { display: block; font-size: 13px; color: var(--text-muted); margin-bottom
 
 /* ===== RIGHT PANEL ===== */
 #right-panel {
-  width: 260px;
+  width: 240px;
   flex-shrink: 0;
   background: var(--dark);
   border-left: 3px solid var(--border);
@@ -650,7 +650,7 @@ label { display: block; font-size: 13px; color: var(--text-muted); margin-bottom
 
 /* ===== LEFT PANEL ===== */
 #left-panel {
-  width: 220px;
+  width: 240px;
   flex-shrink: 0;
   background: var(--dark);
   display: flex;
@@ -819,12 +819,21 @@ label { display: block; font-size: 13px; color: var(--text-muted); margin-bottom
 .player-avatar-big { font-size: 34px; }
 
 .player-oval-name {
-  font-size: 12px; font-weight: 800;
+  font-size: 15px; font-weight: 800;
   color: var(--text);
   text-shadow: 0 1px 3px rgba(240,224,192,.8);
-  max-width: 80px;
+  max-width: 100px;
   text-align: center;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* Crown on avatar corner */
+.player-avatar-wrap { position: relative; display: inline-block; flex-shrink: 0; }
+.admin-crown {
+  position: absolute;
+  bottom: -2px; right: -4px;
+  font-size: 15px; line-height: 1;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,.3));
 }
 
 .player-oval-team {

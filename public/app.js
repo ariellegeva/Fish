@@ -416,8 +416,11 @@ function renderOvalPlayers() {
     }
 
     tile.innerHTML = `
-      <div class="player-avatar-big avatar-t${p.team}">${isImg(p.icon) ? `<img src="${p.icon}">` : p.icon}</div>
-      <div class="player-oval-name">${p.name}${p.id === room.adminId ? ' 👑' : ''}${isMe ? ' (you)' : ''}</div>
+      <div class="player-avatar-wrap">
+        <div class="player-avatar-big avatar-t${p.team}">${isImg(p.icon) ? `<img src="${p.icon}">` : p.icon}</div>
+        ${p.id === room.adminId ? '<span class="admin-crown">👑</span>' : ''}
+      </div>
+      <div class="player-oval-name">${p.name}${isMe ? ' (you)' : ''}</div>
       ${stackHTML}`;
     container.appendChild(tile);
   });
