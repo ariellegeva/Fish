@@ -726,6 +726,7 @@ function selectAskSuit(id) {
 function renderPanelTray() {
   const tray = document.getElementById('panel-tray');
   const hint = document.getElementById('panel-tray-hint');
+  if (!tray || !hint) return; // panel not in DOM
   if (state.panelCards.length === 0) { tray.innerHTML = ''; tray.appendChild(hint); return; }
   hint.remove();
   tray.innerHTML = state.panelCards.map(card => {

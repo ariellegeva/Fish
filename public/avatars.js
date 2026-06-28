@@ -45,7 +45,7 @@ try {
   if (Style && Avatar) {
     // v10 API
     console.log('[avatars] Using v10 API (Style + Avatar)');
-    const res = await fetch('https://esm.sh/@dicebear/styles/miniavs.min.json');
+    const res = await fetch('https://cdn.jsdelivr.net/npm/@dicebear/styles/miniavs.min.json');
     if (!res.ok) throw new Error(`miniavs.min.json fetch failed: ${res.status}`);
     const definition = await res.json();
     const style = new Style(definition);
