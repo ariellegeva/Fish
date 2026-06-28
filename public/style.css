@@ -379,7 +379,7 @@ label { display: block; font-size: 13px; color: var(--text-muted); margin-bottom
   font-family: 'Nunito', sans-serif;
 }
 #pass-modal-msg {
-  font-size: 16px; font-weight: 700; color: var(--text);
+  font-size: 16px; font-weight: 700; color: rgba(0,0,0);
   margin-bottom: 20px; line-height: 1.4;
 }
 #pass-modal-targets {
@@ -391,10 +391,28 @@ label { display: block; font-size: 13px; color: var(--text-muted); margin-bottom
   border-radius: 50px; padding: 8px 18px;
   font-size: 14px; font-weight: 800; cursor: pointer;
   transition: all .15s;
+  color: var(--text); 
 }
 #pass-modal-targets button:hover { background: var(--bg); transform: translateY(-1px); }
 .pass-target-avatar { width: 28px; height: 28px; border-radius: 50%; overflow: hidden; display: flex; align-items: center; justify-content: center; font-size: 16px; }
 .pass-target-avatar img { width: 100%; height: 100%; object-fit: cover; }
+
+/* ===== PASS TOAST (transient) ===== */
+#pass-toast {
+  position: fixed;
+  top: 70px; left: 50%;
+  transform: translateX(-50%);
+  z-index: 260;
+  background: rgba(45,45,45,.92);
+  color: #fff;
+  font-family: 'Nunito', sans-serif;
+  font-size: 15px; font-weight: 800;
+  padding: 12px 24px;
+  border-radius: 50px;
+  box-shadow: 0 4px 20px rgba(0,0,0,.3);
+  white-space: nowrap;
+  pointer-events: none;
+}
 
 /* ===== MUST-CLAIM NOTIFICATION ===== */
 #must-claim-modal {
@@ -597,11 +615,6 @@ label { display: block; font-size: 13px; color: var(--text-muted); margin-bottom
 }
 .rp-tab:hover { color: #c8b89a; }
 .rp-tab.active { color: #fff; border-bottom-color: #fff; }
-/* claim card selected (waiting for player click on board) */
-.claim-card-cell .card-face.claim-selected {
-  border-color: #3a6bc4;
-  box-shadow: 0 0 0 3px rgba(58,107,196,.4);
-}
 
 #rp-ask, #rp-claim, #rp-award {
   display: flex; flex-direction: column;
@@ -653,11 +666,10 @@ label { display: block; font-size: 13px; color: var(--text-muted); margin-bottom
   gap: 8px;
 }
 .claim-card-cell {
-  display: flex; flex-direction: column; align-items: center; gap: 5px;
+  display: flex; flex-direction: column; align-items: stretch; gap: 5px;
 }
-.claim-card-cell .card-face {
-  width: 52px; height: 72px;
-}
+/* Card inside claim cell uses ask-card-pick — full width, identical to ASK */
+.claim-card-cell .ask-card-pick { width: 100%; }
 .claim-player-btn {
   width: 100%;
   background: #2a2a2a;
@@ -866,6 +878,7 @@ label { display: block; font-size: 13px; color: var(--text-muted); margin-bottom
 }
 .lp-score-team-label.t1 { color: #7aafff; }
 .lp-score-team-label.t2 { color: #ff8a7a; }
+.lp-score-team-label.mid { color: #8a7a6a; }
 .lp-won-suits { display: flex; flex-wrap: wrap; gap: 4px; min-height: 20px; margin-bottom: 4px; }
 .lp-suit-badge {
   font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 12px;
@@ -949,23 +962,21 @@ label { display: block; font-size: 13px; color: var(--text-muted); margin-bottom
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding-top: 22px;
+  padding-top: 18px;
 }
 
+/* Fan anchored at top-right of the avatar, behind it */
 .card-fan {
   position: absolute;
-  top: 0;
-  left: 50%;
-  transform: translateX(-50%);
+  top: 12px;
+  left: calc(50% + 16px);
   width: 0; height: 0;
+  z-index: 1; /* behind avatar (z-index 2) */
 }
-
-/* Avatar overlaps the bottom of the fan */
-.player-fan-root .player-avatar-wrap { margin-top: -10px; }
 
 .card-fan-card {
   position: absolute;
-  bottom: -4px;
+  bottom: 0;
   left: -16px; /* half of card width */
   width: 32px;
   height: 46px;
@@ -973,8 +984,7 @@ label { display: block; font-size: 13px; color: var(--text-muted); margin-bottom
   background: #c41414;
   border: 2px solid #7a0a0a;
   box-shadow: 1px 1px 4px rgba(0,0,0,.4);
-  transform-origin: bottom center;
-  /* Inner decorative border */
+  transform-origin: bottom left;
   overflow: hidden;
 }
 .card-fan-card::before {
@@ -992,9 +1002,8 @@ label { display: block; font-size: 13px; color: var(--text-muted); margin-bottom
 
 .card-stack-count {
   position: absolute;
-  top: -26px;
-  left: 50%;
-  transform: translateX(-50%);
+  top: -10px;
+  right: -22px;
   background: #c0392b;
   color: #fff;
   border-radius: 50%;

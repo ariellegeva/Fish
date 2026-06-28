@@ -362,6 +362,7 @@ function renderGameTab() {
   renderOvalPlayers();
   renderHand();
   renderActionStrip();
+  renderTurnState();
   renderRightPanel();
   renderScoreOverlay(); // always visible in left panel
 }
@@ -432,12 +433,13 @@ function renderOvalPlayers() {
 
 // ===================== CARD FAN =====================
 function buildCardFan(count, playerId) {
-  if (count === 0) return `<div style="height:36px"></div>`;
+  if (count === 0) return `<div style="height:18px"></div>`;
   const show = Math.min(count, 6);
-  // Spread angles: evenly across a range scaled by card count
-  const spread = [0, 0, 24, 36, 44, 50, 54][show];
+  // Fan rightward/upward from the avatar's top-right (transform-origin bottom-left)
+  const start = -8;                       // leftmost card angle
+  const spread = [0, 0, 26, 40, 50, 58, 64][show];
   const cards = Array.from({ length: show }, (_, i) => {
-    const angle = show === 1 ? 0 : -spread / 2 + (spread / (show - 1)) * i;
+    const angle = show === 1 ? 10 : start + (spread / (show - 1)) * i;
     return `<div class="card-fan-card" style="transform:rotate(${angle}deg)"></div>`;
   }).join('');
   return `<div class="card-fan" id="stack-${playerId}">
@@ -489,10 +491,7 @@ function renderActionStrip() {
     askArea.style.display = 'none'; passArea.style.display = 'none'; return;
   }
 
-  if (myTurn && outOfCards) {
-    askArea.style.display = 'none'; passArea.style.display = 'none';
-    checkOutOfCardsState(room, me);
-  } else if (myTurn) {
+  if (myTurn && !outOfCards) {
     passArea.style.display = 'none'; askArea.style.display = 'flex'; askArea.style.flexDirection = 'column';
     const targetPlayer = state.selectedTarget && room.players.find(p => p.id === state.selectedTarget);
     const hs = state.selectedCard && cardToHalfSuit(state.selectedCard);
@@ -503,57 +502,72 @@ function renderActionStrip() {
     document.getElementById('ask-btn').disabled = !state.selectedCard || !state.selectedTarget;
   } else {
     askArea.style.display = 'none'; passArea.style.display = 'none';
-    document.getElementById('pass-modal').classList.add('hidden');
-    document.getElementById('must-claim-modal').classList.add('hidden');
-    document.getElementById('right-panel').classList.remove('ask-disabled');
   }
 }
 
-function checkOutOfCardsState(room, me) {
-  const teammates = room.players.filter(p =>
-    p.team === me.team && p.id !== socket.id && p.connected && p.cardCount > 0
-  );
-  const teamColor = me.team === 1 ? 'Blue' : 'Pink';
-  const oppColor  = me.team === 1 ? 'Pink' : 'Blue';
+// Runs for EVERY player based on shared room state.
+function renderTurnState() {
+  const room = state.room;
+  const passModal = document.getElementById('pass-modal');
+  const mustClaim = document.getElementById('must-claim-modal');
+  const rightPanel = document.getElementById('right-panel');
+  if (!room || room.phase !== 'playing') {
+    passModal.classList.add('hidden'); mustClaim.classList.add('hidden');
+    rightPanel.classList.remove('ask-disabled');
+    return;
+  }
 
-  if (teammates.length > 0) {
-    // Can pass — show pass modal
-    showPassModal(me, teammates, room);
-    document.getElementById('must-claim-modal').classList.add('hidden');
-    document.getElementById('right-panel').classList.remove('ask-disabled');
-  } else {
-    // No teammates with cards — must claim remaining suits
-    document.getElementById('pass-modal').classList.add('hidden');
-    const unclaimedCount = 8 - room.claimedSuits.length;
-    if (unclaimedCount > 0) {
-      const oppHasCards = room.players.some(p => p.team !== me.team && p.cardCount > 0);
-      const claimingTeam = oppHasCards ? oppColor : teamColor;
-      document.getElementById('must-claim-msg').textContent =
-        `${claimingTeam} team must claim all remaining suits`;
-      document.getElementById('must-claim-modal').classList.remove('hidden');
-      document.getElementById('right-panel').classList.add('ask-disabled');
-      // Auto-switch to claim tab
-      showRightPanel('claim');
+  const colorOf = (team) => team === 1 ? 'Blue' : 'Pink';
+  const t1HasCards = room.players.some(p => p.team === 1 && p.cardCount > 0);
+  const t2HasCards = room.players.some(p => p.team === 2 && p.cardCount > 0);
+  const suitsLeft = 8 - room.claimedSuits.length;
+
+  // Case A: exactly one team has cards, suits remain → that team must claim
+  if (suitsLeft > 0 && (t1HasCards !== t2HasCards)) {
+    const claimingTeam = t1HasCards ? 1 : 2;
+    passModal.classList.add('hidden');
+    document.getElementById('must-claim-msg').textContent =
+      `${colorOf(claimingTeam)} team must claim all remaining suits`;
+    mustClaim.classList.remove('hidden');
+    // Disable ASK only if I'm on the team that must claim (or always — ASK is impossible anyway)
+    rightPanel.classList.add('ask-disabled');
+    const me = room.players.find(p => p.id === socket.id);
+    if (me && me.team === claimingTeam && state.rightPanelMode === 'ask') showRightPanel('claim');
+    return;
+  }
+
+  rightPanel.classList.remove('ask-disabled');
+
+  // Case B: current-turn player is out of cards but their team still has cards → pass
+  const current = room.players.find(p => p.id === room.currentTurn);
+  if (current && current.cardCount === 0) {
+    const teammates = room.players.filter(p =>
+      p.team === current.team && p.id !== current.id && p.connected && p.cardCount > 0
+    );
+    if (teammates.length > 0) {
+      const iAmCurrent = current.id === socket.id;
+      document.getElementById('pass-modal-msg').textContent =
+        `${current.name} should select a teammate to pass the turn to`;
+      const targets = document.getElementById('pass-modal-targets');
+      if (iAmCurrent) {
+        targets.innerHTML = teammates.map(p => {
+          const avatarHtml = isImg(p.icon) ? `<img src="${p.icon}">` : `<span>${p.icon}</span>`;
+          return `<button onclick="doPassTurn('${p.id}')">
+            <div class="pass-target-avatar avatar-t${p.team}">${avatarHtml}</div>
+            <span>${p.name}</span>
+          </button>`;
+        }).join('');
+      } else {
+        targets.innerHTML = `<div style="font-size:13px;color:var(--text-muted)">Waiting for ${current.name}…</div>`;
+      }
+      passModal.classList.remove('hidden');
+      mustClaim.classList.add('hidden');
+      return;
     }
   }
-}
 
-function showPassModal(me, teammates, room) {
-  const modal = document.getElementById('pass-modal');
-  if (!modal.classList.contains('hidden')) return; // already shown
-  document.getElementById('pass-modal-msg').textContent =
-    `${me.name} should select a teammate to pass the turn to`;
-  const targets = document.getElementById('pass-modal-targets');
-  targets.innerHTML = teammates.map(p => {
-    const avatarHtml = isImg(p.icon)
-      ? `<img src="${p.icon}">`
-      : `<span>${p.icon}</span>`;
-    return `<button onclick="doPassTurn('${p.id}')">
-      <div class="pass-target-avatar avatar-t${p.team}">${avatarHtml}</div>
-      <span>${p.name}</span>
-    </button>`;
-  }).join('');
-  modal.classList.remove('hidden');
+  passModal.classList.add('hidden');
+  mustClaim.classList.add('hidden');
 }
 
 function doPassTurn(toPlayerId) {
@@ -565,13 +579,12 @@ function doPassTurn(toPlayerId) {
 
 let passNotifTimer = null;
 function showPassNotification(msg) {
-  const el = document.getElementById('must-claim-msg');
-  const modal = document.getElementById('must-claim-modal');
-  el.textContent = msg;
-  modal.classList.remove('hidden');
+  const toast = document.getElementById('pass-toast');
+  document.getElementById('pass-toast-msg').textContent = msg;
+  toast.classList.remove('hidden');
   if (passNotifTimer) clearTimeout(passNotifTimer);
   passNotifTimer = setTimeout(() => {
-    modal.classList.add('hidden');
+    toast.classList.add('hidden');
     passNotifTimer = null;
   }, 3000);
 }
@@ -699,11 +712,10 @@ function renderClaimPanel() {
           ? (isImg(assignedPlayer.icon) ? '' : assignedPlayer.icon) + ' ' + assignedPlayer.name
           : (isSelCard ? '← click player' : 'select…');
         return `<div class="claim-card-cell">
-          <div class="card-face ${red?'red':'black'} ${isSelCard?'claim-selected':''}"
-            style="cursor:pointer" onclick="selectClaimCard('${card}')">
-            <div class="rank-top">${rank}<span class="suit-small">${suit}</span></div>
-            <div class="suit-center">${suit}</div>
-            <div class="rank-bottom">${rank}</div>
+          <div class="ask-card-pick ${red?'red':'black'} ${isSelCard?'selected':''}"
+            onclick="selectClaimCard('${card}')">
+            <span class="acp-rank">${rank}</span>
+            <span class="acp-suit">${suit}</span>
           </div>
           <button class="claim-player-btn ${assignedPlayer?'assigned':''} ${isSelCard&&!assignedPlayer?'waiting':''}"
             onclick="selectClaimCard('${card}')">${btnLabel}</button>
@@ -1094,13 +1106,13 @@ function renderScoreOverlay() {
   const won1 = room.claimedSuits.filter(s => s.winner === 1);
   const won2 = room.claimedSuits.filter(s => s.winner === 2);
   const wonM = room.claimedSuits.filter(s => s.winner === 0);
+  const empty = '<span style="font-size:10px;color:#3a3a3a">—</span>';
   const w1el = document.getElementById('lp-won-t1');
   const w2el = document.getElementById('lp-won-t2');
-  if (w1el) w1el.innerHTML = won1.map(s => `<span class="lp-suit-badge t1">${s.name}</span>`).join('') || '<span style="font-size:10px;color:#3a3a3a">—</span>';
-  if (w2el) w2el.innerHTML = [
-    ...won2.map(s => `<span class="lp-suit-badge t2">${s.name}</span>`),
-    ...wonM.map(s => `<span class="lp-suit-badge mid">${s.name}</span>`),
-  ].join('') || '<span style="font-size:10px;color:#3a3a3a">—</span>';
+  const wMel = document.getElementById('lp-won-mid');
+  if (w1el) w1el.innerHTML = won1.map(s => `<span class="lp-suit-badge t1">${s.name}</span>`).join('') || empty;
+  if (w2el) w2el.innerHTML = won2.map(s => `<span class="lp-suit-badge t2">${s.name}</span>`).join('') || empty;
+  if (wMel) wMel.innerHTML = wonM.map(s => `<span class="lp-suit-badge mid">${s.name}</span>`).join('') || empty;
 }
 
 // ===================== SETTINGS =====================
@@ -1210,6 +1222,10 @@ function goHome() {
   document.getElementById('event-overlay').classList.add('hidden');
   document.getElementById('exit-modal').classList.add('hidden');
   document.getElementById('win-overlay').classList.add('hidden');
+  document.getElementById('pass-modal').classList.add('hidden');
+  document.getElementById('must-claim-modal').classList.add('hidden');
+  document.getElementById('pass-toast').classList.add('hidden');
+  document.getElementById('right-panel').classList.remove('ask-disabled');
   dismissClaimOverlay();
   document.getElementById('nav').classList.add('hidden');
   showPage('landing');

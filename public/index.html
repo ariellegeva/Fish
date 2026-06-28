@@ -235,6 +235,8 @@
       <div id="lp-won-t1" class="lp-won-suits"></div>
       <div class="lp-score-team-label t2">Team 2</div>
       <div id="lp-won-t2" class="lp-won-suits"></div>
+      <div class="lp-score-team-label mid">Middle</div>
+      <div id="lp-won-mid" class="lp-won-suits"></div>
     </div>
   </div>
 
@@ -280,12 +282,15 @@
   <div id="pass-modal-targets"></div>
 </div>
 
-<!-- Must-claim notification -->
+<!-- Must-claim notification (persistent) -->
 <div id="must-claim-modal" class="hidden">
   <div id="must-claim-inner">
     <span id="must-claim-msg"></span>
   </div>
 </div>
+
+<!-- Pass announcement toast (transient) -->
+<div id="pass-toast" class="hidden"><span id="pass-toast-msg"></span></div>
 
 <!-- Full-screen game-end overlay -->
 <div id="win-overlay" class="hidden">
