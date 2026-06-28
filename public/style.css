@@ -628,6 +628,7 @@ label { display: block; font-size: 13px; color: var(--text-muted); margin-bottom
 .ask-card-pick.red   { color: #c0392b; }
 .ask-card-pick.black { color: #2d2d2d; }
 .ask-card-pick.selected { color: #3a6bc4 !important; }
+.ask-card-pick.dimmed   { opacity: .3; pointer-events: none; }
 
 .acp-rank { font-size: 22px; font-weight: 900; line-height: 1; }
 .acp-suit { font-size: 20px; line-height: 1; }

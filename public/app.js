@@ -441,7 +441,7 @@ function renderHand() {
     const rank = cardRank(card), suit = cardSuit(card);
     const isSelectedAsk = state.selectedCard === card;
     const isDimmed = suitCards && !suitCards.includes(card) && !isSelectedAsk;
-    const cls = ['hand-card-v2', red?'red':'black', isSelectedAsk?'selected':'', isDimmed?'dimmed':''].join(' ');
+    const cls = ['ask-card-pick', red?'red':'black', isSelectedAsk?'selected':'', isDimmed?'dimmed':''].join(' ');
     return `<div class="${cls}" onclick="handleCardClick('${card}')">
       <span class="acp-rank">${rank}</span>
       <span class="acp-suit">${suit}</span>
