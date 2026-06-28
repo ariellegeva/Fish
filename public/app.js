@@ -1,5 +1,10 @@
 // ===================== CONSTANTS =====================
-const EMOJIS = ['😀','😎','🐟','🦈','🐙','🦊','🐻','🐼','🦁','🐯','🐸','🦋','🌊','⭐','🎯','🎲','🍕','🚀'];
+const AVATAR_SEEDS = [
+  'Tiger','Panda','Fox','Bear','Bunny','Cat','Dragon','Eagle',
+  'Frog','Lion','Owl','Phoenix','Shark','Turtle','Wolf','Zebra',
+  'Monkey','Penguin','Koala','Dolphin'
+];
+const AVATAR_BASE = 'https://api.dicebear.com/9.x/miniavs/svg?seed=';
 
 const HALF_SUITS = [
   { id: 'low_hearts',    name: 'Low',    suit: '♥', cards: ['2♥','3♥','4♥','5♥','6♥','7♥'],   red: true },
@@ -25,7 +30,7 @@ function cardToHalfSuit(card) { return HALF_SUITS.find(hs => hs.cards.includes(c
 // ===================== STATE =====================
 let socket;
 let state = {
-  adminIcon: '😀', joinIcon: '😀',
+  adminIcon: AVATAR_BASE + 'Tiger', joinIcon: AVATAR_BASE + 'Tiger',
   pendingCode: null,
   selectedCount: 6,
   room: null,
@@ -52,7 +57,7 @@ let eventOverlayTimer = null;
 
 // ===================== INIT =====================
 window.addEventListener('DOMContentLoaded', () => {
-  buildEmojiGrids();
+  buildAvatarGrids();
   buildCountGrid();
   initSocket();
 
@@ -165,22 +170,25 @@ function updateNav() {
 }
 
 // ===================== EMOJI / COUNT =====================
-function buildEmojiGrids() {
+function buildAvatarGrids() {
   ['admin','join'].forEach(prefix => {
     const grid = document.getElementById(`${prefix}-emoji-grid`);
-    EMOJIS.forEach(e => {
+    AVATAR_SEEDS.forEach(seed => {
+      const url = AVATAR_BASE + seed;
       const d = document.createElement('div');
-      d.className = 'emoji-opt'; d.textContent = e;
-      d.onclick = () => selectEmoji(prefix, e, d);
+      d.className = 'emoji-opt avatar-opt';
+      d.innerHTML = `<img src="${url}" alt="${seed}">`;
+      d.title = seed;
+      d.onclick = () => selectAvatar(prefix, url, d);
       grid.appendChild(d);
     });
   });
 }
-function selectEmoji(prefix, emoji, el) {
+function selectAvatar(prefix, url, el) {
   document.querySelectorAll(`#${prefix}-emoji-grid .emoji-opt`).forEach(x => x.classList.remove('selected'));
   el.classList.add('selected');
-  state[`${prefix}Icon`] = emoji;
-  document.getElementById(`${prefix}-icon-preview`).innerHTML = emoji;
+  state[`${prefix}Icon`] = url;
+  document.getElementById(`${prefix}-icon-preview`).innerHTML = `<img src="${url}">`;
 }
 function handleIconUpload(prefix) {
   const file = document.getElementById(`${prefix}-icon-file`).files[0];
@@ -1086,6 +1094,6 @@ function goHome() {
 }
 
 // ===================== UTILS =====================
-function isImg(icon) { return icon && icon.startsWith('data:'); }
+function isImg(icon) { return icon && (icon.startsWith('data:') || icon.startsWith('http')); }
 function escHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function playerInline(p) { return `${isImg(p.icon) ? '' : p.icon} ${p.name}`; }
