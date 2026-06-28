@@ -187,6 +187,14 @@ io.on('connection', (socket) => {
       }
       return cb({ ok: false, error: 'Game already started' });
     }
+    // If this socket already has a player in the room, treat as a team change
+    const mine = room.players.find(p => p.id === socket.id);
+    if (mine) {
+      if (team) mine.team = team;
+      io.to(code).emit('room_update', publicRoom(room));
+      return cb({ ok: true, room: publicRoom(room), myHand: mine.hand || [] });
+    }
+
     if (room.players.length >= room.settings.numPlayers) return cb({ ok: false, error: 'Room full' });
     if (room.players.find(p => p.name.toLowerCase() === name.toLowerCase()))
       return cb({ ok: false, error: 'That name is already taken — choose another.' });
@@ -197,6 +205,8 @@ io.on('connection', (socket) => {
       const t1 = room.players.filter(p=>p.team===1).length;
       const t2 = room.players.filter(p=>p.team===2).length;
       assignedTeam = t1 <= t2 ? 1 : 2;
+    } else if (!assignedTeam) {
+      assignedTeam = 1; // default until they pick
     }
 
     const player = { id: socket.id, name, icon, team: assignedTeam, hand: [], connected: true };
