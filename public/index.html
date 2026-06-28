@@ -212,109 +212,77 @@
 <!-- ==================== GAME TAB ==================== -->
 <div id="tab-game" class="hidden">
 
-  <!-- Left: table + hand strip -->
-  <div id="game-left">
+  <!-- Left panel: my cards + actions + score -->
+  <div id="left-panel">
+    <div id="lp-cards-header">My cards <span id="hand-count"></span></div>
+    <div id="hand-container-v2"></div>
 
-    <!-- Table area -->
-    <div id="game-table-area">
-      <div id="turn-banner-v2"></div>
-      <div id="oval-players"></div>
-      <button id="score-corner-btn" onclick="toggleScoreOverlay()">Score ▸</button>
-
-      <!-- Score overlay (floating over game table) -->
-      <div id="score-overlay" class="hidden">
-        <div id="score-overlay-box">
-          <div class="so-header">
-            <span class="so-title">SCORE</span>
-            <button onclick="toggleScoreOverlay()" style="background:transparent;border:1px solid #5a4a3a;color:#8a7a6a;padding:3px 10px;font-size:11px;border-radius:6px">✕</button>
-          </div>
-          <div class="so-body">
-            <div class="so-team-section">
-              <div class="so-team-label t1">TEAM 1</div>
-              <div class="so-suits" id="so-suits-t1"></div>
-            </div>
-            <div class="so-scores">
-              <div class="so-score-box t1"><div class="so-score-num" id="so-score-t1">0</div><div class="so-score-lbl">TEAM 1</div></div>
-              <div class="so-score-box mid"><div class="so-score-num" id="so-score-mid">0</div><div class="so-score-lbl">MID</div></div>
-              <div class="so-score-box t2"><div class="so-score-num" id="so-score-t2">0</div><div class="so-score-lbl">TEAM 2</div></div>
-            </div>
-            <div class="so-team-section">
-              <div class="so-team-label t2">TEAM 2</div>
-              <div class="so-suits" id="so-suits-t2"></div>
-            </div>
-          </div>
-        </div>
+    <div id="lp-actions">
+      <div id="action-strip" style="display:none">
+        <span id="ask-summary"></span>
+        <button id="ask-btn" onclick="submitAsk()" disabled>Ask</button>
       </div>
-
-      <!-- Claim result overlay (persists until closed or overridden by ask) -->
-      <div id="claim-overlay" class="hidden">
-        <div id="claim-overlay-box">
-          <div id="claim-overlay-header">
-            <span id="claim-overlay-title"></span>
-            <button onclick="dismissClaimOverlay()" id="claim-overlay-close">✕ Close</button>
-          </div>
-          <div id="claim-overlay-rows"></div>
-        </div>
-      </div>
-
-      <!-- Ask/result event overlay (shown center-table for all players) -->
-      <div id="event-overlay" class="hidden">
-        <div id="event-box">
-          <div id="event-card-el"></div>
-          <div id="event-body">
-            <div id="event-names"></div>
-            <div id="event-msg"></div>
-          </div>
-          <div id="event-sym"></div>
-        </div>
+      <div id="pass-area" style="display:none">
+        <div style="font-size:11px;color:#8a7a6a;font-weight:700;margin-bottom:6px">Out of cards — pass to:</div>
+        <div id="pass-targets"></div>
       </div>
     </div>
 
-    <!-- Bottom hand strip -->
-    <div id="hand-strip">
-      <div id="hand-strip-header">
-        <div>
-          <div id="hand-strip-label">Your hand <span id="hand-count"></span></div>
-          <div id="hand-strip-hint"></div>
-        </div>
-        <div id="hand-strip-actions">
-          <div id="action-strip" style="display:none">
-            <span id="ask-summary"></span>
-            <button id="ask-btn" onclick="submitAsk()" disabled>Ask</button>
-          </div>
-          <div id="pass-area" style="display:none">
-            <span style="font-size:12px;color:#8a7a6a;font-weight:700;margin-right:8px">Out of cards — pass to:</span>
-            <span id="pass-targets"></span>
-          </div>
-        </div>
+    <div id="lp-score">
+      <div id="lp-score-label">Score</div>
+      <div id="lp-score-row">
+        <div class="lp-score-box t1"><div class="lp-score-num" id="lp-s-t1">0</div><div class="lp-score-lbl">T1</div></div>
+        <div class="lp-score-box mid"><div class="lp-score-num" id="lp-s-mid">0</div><div class="lp-score-lbl">Mid</div></div>
+        <div class="lp-score-box t2"><div class="lp-score-num" id="lp-s-t2">0</div><div class="lp-score-lbl">T2</div></div>
       </div>
-      <div id="hand-container-v2"></div>
+      <div class="lp-score-team-label t1">Team 1</div>
+      <div id="lp-won-t1" class="lp-won-suits"></div>
+      <div class="lp-score-team-label t2">Team 2</div>
+      <div id="lp-won-t2" class="lp-won-suits"></div>
     </div>
+  </div>
 
+  <!-- Square game table -->
+  <div id="game-table-area">
+    <div id="turn-banner-v2"></div>
+    <div id="oval-players"></div>
+
+    <!-- Ask/result event overlay (circular) -->
+    <div id="event-overlay" class="hidden">
+      <div id="event-box">
+        <div id="event-card-el"></div>
+        <div id="event-names"></div>
+        <div id="event-msg"></div>
+        <div id="event-sym"></div>
+      </div>
+    </div>
   </div>
 
   <!-- Right panel: ASK / Claim tabs -->
   <div id="right-panel">
-
-    <!-- Tab bar -->
     <div class="rp-tabs-bar">
       <button class="rp-tab" id="rp-tab-ask"   onclick="showRightPanel('ask')">ASK</button>
       <button class="rp-tab" id="rp-tab-claim" onclick="showRightPanel('claim')">claim</button>
     </div>
-
-    <!-- ASK mode -->
     <div id="rp-ask" class="hidden">
       <div class="rp-hint">Pick a half-suit you hold, then a card, then a player</div>
       <div id="ask-suit-list"></div>
     </div>
-
-    <!-- CLAIM mode -->
     <div id="rp-claim" class="hidden">
-      <div class="rp-hint">Pick a suit, assign each card to a player, select the team</div>
+      <div class="rp-hint">Pick a suit, assign each card to a player</div>
       <div id="claim-suit-list"></div>
     </div>
+  </div>
+</div>
 
-
+<!-- Full-screen claim overlay (fixed, 92% opacity) -->
+<div id="claim-overlay" class="hidden">
+  <div id="claim-overlay-inner">
+    <div id="claim-overlay-header">
+      <span id="claim-overlay-title"></span>
+      <button onclick="dismissClaimOverlay()" id="claim-overlay-close">✕ Close</button>
+    </div>
+    <div id="claim-overlay-rows"></div>
   </div>
 </div>
 

@@ -357,6 +357,7 @@ function renderGameTab() {
   renderHand();
   renderActionStrip();
   renderRightPanel();
+  renderScoreOverlay(); // always visible in left panel
 }
 
 function renderTurnBanner() {
@@ -384,7 +385,7 @@ function renderOvalPlayers() {
     const offset = (i - myIdx + n) % n;
     const angleDeg = 90 + (offset / n) * 360;
     const angleRad = (angleDeg * Math.PI) / 180;
-    const rx = 38, ry = 32;
+    const rx = 36, ry = 36; // circle
     const xPct = 50 + rx * Math.cos(angleRad);
     const yPct = 50 + ry * Math.sin(angleRad);
 
@@ -398,13 +399,10 @@ function renderOvalPlayers() {
 
     const cardCount = p.cardCount || 0;
     const stackHTML = cardCount > 0
-      ? `<div class="card-stack-wrap" id="stack-${p.id}" style="margin-top:4px">
-           <div class="stack-shadow-2"></div>
-           <div class="stack-shadow-1"></div>
-           <div class="card-back"></div>
-           <span class="card-stack-count">${cardCount}</span>
+      ? `<div id="stack-${p.id}" style="margin-top:2px;position:relative;display:inline-block">
+           <span class="card-stack-count" style="position:static;display:inline-flex;width:26px;height:26px;font-size:13px">${cardCount}</span>
          </div>`
-      : `<div style="height:30px;font-size:11px;color:#9a8a7a;font-weight:700;padding-top:8px">no cards</div>`;
+      : `<div style="height:20px;font-size:11px;color:#9a8a7a;font-weight:700">no cards</div>`;
 
     const tile = document.createElement('div');
     tile.className = ['player-oval-tile', isCurrent?'current-turn':'', isClickable?'clickable':'',
@@ -465,30 +463,26 @@ function renderActionStrip() {
   const outOfCards = state.myHand.length === 0;
   const askArea  = document.getElementById('action-strip');
   const passArea = document.getElementById('pass-area');
-  const hint     = document.getElementById('hand-strip-hint');
+  const hint     = null; // hint removed (no bottom strip)
 
   if (!room || room.phase !== 'playing' || !me) {
-    askArea.style.display = 'none'; passArea.style.display = 'none';
-    hint.textContent = ''; return;
+    askArea.style.display = 'none'; passArea.style.display = 'none'; return;
   }
 
   if (myTurn && outOfCards) {
     askArea.style.display = 'none'; passArea.style.display = 'flex';
     renderPassTargets();
-    hint.textContent = '';
   } else if (myTurn) {
     passArea.style.display = 'none'; askArea.style.display = 'flex';
     const targetPlayer = state.selectedTarget && room.players.find(p => p.id === state.selectedTarget);
     const hs = state.selectedCard && cardToHalfSuit(state.selectedCard);
     const red = state.selectedCard && cardRed(state.selectedCard);
     document.getElementById('ask-summary').innerHTML = state.selectedCard
-      ? `Asking <span class="ask-hi">${targetPlayer ? targetPlayer.name : '—'}</span> for <span class="ask-card-badge${red ? ' red' : ''}">${state.selectedCard}</span>${hs ? ` <span style="color:#6a5a4a;font-size:13px">(${hs.name} ${hs.suit})</span>` : ''}`
-      : `<span style="color:#5a4a3a">Pick a suit → card → opponent</span>`;
+      ? `Asking <span class="ask-hi">${targetPlayer ? targetPlayer.name : '—'}</span> for <span class="ask-card-badge${red ? ' red' : ''}">${state.selectedCard}</span>${hs ? ` <span style="color:#6a5a4a;font-size:11px">(${hs.name} ${hs.suit})</span>` : ''}`
+      : `<span style="color:#5a4a3a">Pick suit → card → opponent</span>`;
     document.getElementById('ask-btn').disabled = !state.selectedCard || !state.selectedTarget;
-    hint.textContent = '';
   } else {
     askArea.style.display = 'none'; passArea.style.display = 'none';
-    hint.textContent = state.rightPanelMode === 'score' ? 'Click cards to add to discussion tray' : '';
   }
 }
 
@@ -815,7 +809,7 @@ function showEventOverlay({ askerId, askerName, targetId, targetName, card, hadC
   if (eventOverlayTimer) { clearTimeout(eventOverlayTimer); eventOverlayTimer = null; }
 
   // Phase 1: question
-  cardEl.innerHTML = buildCardFaceHTML(card, 'lg');
+  cardEl.innerHTML = buildCardFaceHTML(card, 'sm');
   names.textContent = `${askerLabel} → ${targetLabel}`;
   msgEl.textContent = `asked for the ${card}`;
   symEl.textContent = '?';
@@ -862,11 +856,10 @@ function showClaimResultOverlay({ claimerName, suitName, suitSym, result, cardsB
   const colorClass = { correct:'co-correct', wrong_positions:'co-mid', wrong_team:'co-wrong' }[result] || 'co-correct';
 
   const overlay = document.getElementById('claim-overlay');
-  const box     = document.getElementById('claim-overlay-box');
   const title   = document.getElementById('claim-overlay-title');
   const rows    = document.getElementById('claim-overlay-rows');
 
-  box.className = colorClass;
+  overlay.className = colorClass; // full-screen overlay gets the color
   title.textContent = `${claimerName} claimed ${suitName}${suitSym} — ${labels[result]}`;
 
   function playerRows(list) {
@@ -993,10 +986,9 @@ function restoreAskResultOverlay({ askerId, askerName, targetId, targetName, car
 
   // Reset any claim-mode inline styles
   box.style.cssText = '';
-  names.style.display = '';
   msgEl.style.cssText = '';
 
-  cardEl.innerHTML = buildCardFaceHTML(card, 'lg');
+  cardEl.innerHTML = buildCardFaceHTML(card, 'sm');
   names.textContent = `${askerLabel} → ${targetLabel}`;
 
   if (hadCard) {
@@ -1014,23 +1006,25 @@ function restoreAskResultOverlay({ askerId, askerName, targetId, targetName, car
 }
 
 function renderScoreOverlay() {
+  // Score now lives in left panel — update those elements
   const room = state.room; if (!room) return;
-  document.getElementById('so-score-t1').textContent  = room.scores.team1;
-  document.getElementById('so-score-t2').textContent  = room.scores.team2;
-  document.getElementById('so-score-mid').textContent = room.claimedSuits.filter(s => s.winner === 0).length;
+  const s1 = document.getElementById('lp-s-t1');
+  const s2 = document.getElementById('lp-s-t2');
+  const sm = document.getElementById('lp-s-mid');
+  if (s1) s1.textContent = room.scores.team1;
+  if (s2) s2.textContent = room.scores.team2;
+  if (sm) sm.textContent = room.claimedSuits.filter(s => s.winner === 0).length;
 
   const won1 = room.claimedSuits.filter(s => s.winner === 1);
   const won2 = room.claimedSuits.filter(s => s.winner === 2);
   const wonM = room.claimedSuits.filter(s => s.winner === 0);
-
-  document.getElementById('so-suits-t1').innerHTML = won1.length
-    ? won1.map(s => `<span class="so-suit-badge t1">${s.name}</span>`).join('')
-    : '<span style="font-size:11px;color:#3a3a3a">—</span>';
-
-  document.getElementById('so-suits-t2').innerHTML = [
-    ...won2.map(s => `<span class="so-suit-badge t2">${s.name}</span>`),
-    ...wonM.map(s => `<span class="so-suit-badge mid">${s.name} (mid)</span>`),
-  ].join('') || '<span style="font-size:11px;color:#3a3a3a">—</span>';
+  const w1el = document.getElementById('lp-won-t1');
+  const w2el = document.getElementById('lp-won-t2');
+  if (w1el) w1el.innerHTML = won1.map(s => `<span class="lp-suit-badge t1">${s.name}</span>`).join('') || '<span style="font-size:10px;color:#3a3a3a">—</span>';
+  if (w2el) w2el.innerHTML = [
+    ...won2.map(s => `<span class="lp-suit-badge t2">${s.name}</span>`),
+    ...wonM.map(s => `<span class="lp-suit-badge mid">${s.name}</span>`),
+  ].join('') || '<span style="font-size:10px;color:#3a3a3a">—</span>';
 }
 
 // ===================== SETTINGS =====================
