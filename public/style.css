@@ -320,12 +320,12 @@ label { display: block; font-size: 13px; color: var(--text-muted); margin-bottom
   gap: 6px;
   transition: background .35s;
 }
-#event-box.got-it  { background: #5aba78; }
-#event-box.no-card { background: #d97060; }
+#event-box.got-it  { background: #62cd84; }
+#event-box.no-card { background: #ff5972; }
 
 /* Names pill — top of circle */
 #event-names {
-  font-size: 13px; font-weight: 700;
+  font-size: 16px; font-weight: 800;
   color: rgba(0,0,0,.5);
   background: rgba(0,0,0,.07);
   padding: 3px 12px; border-radius: 20px;
@@ -691,38 +691,15 @@ label { display: block; font-size: 13px; color: var(--text-muted); margin-bottom
 #hand-container-v2 {
   display: grid;
   grid-template-columns: 1fr 1fr;
+  grid-auto-rows: min-content;
+  align-content: start;
   gap: 8px;
   padding: 0 10px 10px;
   overflow-y: auto;
   flex: 1;
 }
 
-/* Hand cards in left panel — same compact style as ask card picker */
-.hand-card-v2 {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  background: #fff;
-  border: 2.5px solid #2d2d2d;
-  border-radius: 12px;
-  padding: 10px 6px;
-  cursor: pointer;
-  transition: all .15s;
-  box-shadow: 0 2px 0 #2d2d2d;
-  font-family: 'Nunito', sans-serif;
-  gap: 2px;
-  min-height: 70px;
-}
-.hand-card-v2:hover { transform: translateY(-2px); box-shadow: 0 4px 0 #2d2d2d; }
-.hand-card-v2.selected { border-color: #3a6bc4; background: #e8f4ff; box-shadow: 0 2px 0 #3a6bc4; }
-.hand-card-v2.dimmed   { opacity: .3; pointer-events: none; }
-.hand-card-v2.red   { color: #c0392b; }
-.hand-card-v2.black { color: #2d2d2d; }
-.hand-card-v2.selected { color: #3a6bc4 !important; }
-.hand-card-v2 .acp-rank { font-size: 22px; font-weight: 900; line-height: 1; }
-.hand-card-v2 .acp-suit { font-size: 20px; line-height: 1; }
+/* hand-card-v2 removed — hand cards now use .ask-card-pick directly */
 
 #action-strip { display: flex; flex-direction: column; gap: 6px; }
 #ask-summary { font-size: 12px; font-weight: 700; color: #8a7a6a; }
