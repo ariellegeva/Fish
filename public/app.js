@@ -45,7 +45,8 @@ let state = {
   panelCards: [],
   rightPanelMode: 'ask', // 'ask' | 'claim'
   scoreOverlayOpen: false,
-  lastAskResult: null,   // stored so score overlay can hide/restore the ask slide
+  lastAskResult: null,
+  lastClaimResult: null, // persists until manually closed or next ask
   inCreateFlow: false,
 };
 
@@ -793,6 +794,9 @@ function showEventOverlay({ askerId, askerName, targetId, targetName, card, hadC
   // Store for score-overlay restore
   state.lastAskResult = { askerId, askerName, targetId, targetName, card, hadCard };
 
+  // A new ask clears any lingering claim result overlay
+  dismissClaimOverlay();
+
   // If score overlay is open, don't show the ask slide now — it'll restore when score closes
   if (state.scoreOverlayOpen) return;
 
@@ -843,74 +847,41 @@ function showEventOverlay({ askerId, askerName, targetId, targetName, card, hadC
 
 // ===================== CLAIM RESULT OVERLAY =====================
 function showClaimResultOverlay({ claimerName, suitName, suitSym, result, cardsByPlayer }) {
-  if (eventOverlayTimer) { clearTimeout(eventOverlayTimer); eventOverlayTimer = null; }
+  state.lastClaimResult = { claimerName, suitName, suitSym, result, cardsByPlayer };
 
-  const colors = {
-    correct:         { bg: '#5aba78', border: '#2d7040', label: 'Correct!' },
-    wrong_positions: { bg: '#d4b44a', border: '#8a7020', label: 'Right team, wrong positions — middle' },
-    wrong_team:      { bg: '#d97060', border: '#8a3020', label: 'Wrong team!' },
+  const labels = {
+    correct:         'Correct!',
+    wrong_positions: 'Right team, wrong positions — middle',
+    wrong_team:      'Wrong team!',
   };
-  const c = colors[result] || colors.correct;
+  const colorClass = { correct:'co-correct', wrong_positions:'co-mid', wrong_team:'co-wrong' }[result] || 'co-correct';
 
-  const overlay  = document.getElementById('event-overlay');
-  const box      = document.getElementById('event-box');
-  const cardEl   = document.getElementById('event-card-el');
-  const names    = document.getElementById('event-names');
-  const msgEl    = document.getElementById('event-msg');
-  const symEl    = document.getElementById('event-sym');
+  const overlay = document.getElementById('claim-overlay');
+  const box     = document.getElementById('claim-overlay-box');
+  const title   = document.getElementById('claim-overlay-title');
+  const rows    = document.getElementById('claim-overlay-rows');
 
-  // Repurpose the overlay for a wider claim layout
-  box.className = '';
-  box.style.flexDirection = 'column';
-  box.style.background    = c.bg;
-  box.style.borderColor   = c.border;
-  box.style.width         = 'min(720px, 92%)';
-  box.style.gap           = '14px';
+  box.className = colorClass;
+  title.textContent = `${claimerName} claimed ${suitName}${suitSym} — ${labels[result]}`;
 
-  cardEl.innerHTML = '';
-  symEl.innerHTML  = '';
-  names.style.display = 'none';
-
-  msgEl.style.fontSize   = '20px';
-  msgEl.style.fontWeight = '900';
-  msgEl.style.color      = '#fff';
-  msgEl.textContent = `${claimerName} claimed ${suitName}${suitSym} — ${c.label}`;
-
-  // Player cards grid
-  const grid = document.createElement('div');
-  grid.style.cssText = 'display:flex;gap:16px;flex-wrap:wrap;justify-content:center;';
-  cardsByPlayer.forEach(({ playerName, playerIcon, cards }) => {
-    const cell = document.createElement('div');
-    cell.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:6px;';
-    const avatarEl = document.createElement('div');
-    avatarEl.style.cssText = 'font-size:26px;';
-    avatarEl.textContent = isImg(playerIcon) ? '' : playerIcon;
-    const nameEl = document.createElement('div');
-    nameEl.style.cssText = 'color:rgba(255,255,255,.85);font-size:12px;font-weight:800;font-family:Nunito,sans-serif;';
-    nameEl.textContent = playerName;
-    const cardsRow = document.createElement('div');
-    cardsRow.style.cssText = 'display:flex;gap:5px;';
-    cards.forEach(card => { cardsRow.innerHTML += buildCardFaceHTML(card, 'sm'); });
-    cell.appendChild(avatarEl);
-    cell.appendChild(nameEl);
-    cell.appendChild(cardsRow);
-    grid.appendChild(cell);
-  });
-  msgEl.after(grid);
+  rows.innerHTML = cardsByPlayer.map(({ playerName, playerIcon, cards, team }) => {
+    const avatarHtml = isImg(playerIcon)
+      ? `<img src="${playerIcon}">`
+      : `<span>${playerIcon}</span>`;
+    const cardHtml = cards.map(c => buildCardFaceHTML(c, 'sm')).join('');
+    return `<div class="claim-reveal-row">
+      <div class="claim-reveal-avatar avatar-t${team || ''}">${avatarHtml}</div>
+      <div class="claim-reveal-name">${playerName}</div>
+      <div class="claim-reveal-cards">${cardHtml}</div>
+    </div>`;
+  }).join('');
 
   overlay.classList.remove('hidden');
-  overlay.classList.add('show');
+}
 
-  eventOverlayTimer = setTimeout(() => {
-    overlay.classList.add('hidden');
-    overlay.classList.remove('show');
-    // Reset box styles
-    box.style.cssText = '';
-    names.style.display = '';
-    msgEl.style.cssText = '';
-    grid.remove();
-    eventOverlayTimer = null;
-  }, 4000);
+function dismissClaimOverlay() {
+  state.lastClaimResult = null;
+  document.getElementById('claim-overlay')?.classList.add('hidden');
 }
 
 // ===================== CARD ACTIONS =====================
@@ -1103,9 +1074,10 @@ function goHome() {
   state.selectedCard = null; state.selectedTarget = null;
   state.panelCards = []; state.askSuit = null; state.rightPanelMode = 'ask';
   state.claimSuit = null; state.claimTeam = null; state.claimAssignments = {};
-  state.scoreOverlayOpen = false; state.lastAskResult = null;
+  state.scoreOverlayOpen = false; state.lastAskResult = null; state.lastClaimResult = null;
   document.getElementById('score-overlay').classList.add('hidden');
   document.getElementById('event-overlay').classList.add('hidden');
+  dismissClaimOverlay();
   document.getElementById('exit-modal').classList.add('hidden');
   document.getElementById('event-overlay').classList.add('hidden');
   document.getElementById('nav').classList.add('hidden');

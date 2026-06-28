@@ -246,6 +246,17 @@
         </div>
       </div>
 
+      <!-- Claim result overlay (persists until closed or overridden by ask) -->
+      <div id="claim-overlay" class="hidden">
+        <div id="claim-overlay-box">
+          <div id="claim-overlay-header">
+            <span id="claim-overlay-title"></span>
+            <button onclick="dismissClaimOverlay()" id="claim-overlay-close">✕ Close</button>
+          </div>
+          <div id="claim-overlay-rows"></div>
+        </div>
+      </div>
+
       <!-- Ask/result event overlay (shown center-table for all players) -->
       <div id="event-overlay" class="hidden">
         <div id="event-box">

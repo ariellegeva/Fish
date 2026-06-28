@@ -5,8 +5,8 @@ const OPTIONS = {
   bodyColorFillStops: 2,
   bodyColorAngle:     3,
   mustacheProbability: 30,
-  hairColor:  ['1b0b47','47280b','ad3a20','4d70ff','ff1aab','fff3a8'],
-  skinColor:  ['836055','f5d0c5','ffcb7e','fce7fd','b25757','610000','fbefef','cfd3f7'],
+  hairColor:  ['1b0b47','47280b','ad3a20','4d70ff','ff1aab','fff3a8','b4704b','000000','ffdf0f'],
+  skinColor:  ['836055','f5d0c5','ffcb7e','fce7fd','b25757','610000','fbefef'],
   blushProbability:   40,
   glassesProbability: 10,
   hairVariant:     { balndess:1, classic01:2, classic02:2, curly:3, elvis:2, long:5, ponyTail:5, slaughter:2, stylish:2 },
@@ -15,11 +15,7 @@ const OPTIONS = {
   mustacheVariant: { freddy:3, horshoe:2, pencilThin:1, pencilThinBeard:1 },
 };
 
-const SEEDS = [
-  'n','Panda','Foxc','m','p','Cat','dragonk','c',
-  'fff','Lionl','nor','peet','spar','tell','Wolfy','Zebra',
-  'Monkey','Penguin','Koala','Dolphin'
-];
+const SEEDS = Array.from({ length: 20 }, () => Math.random().toString(36).slice(2, 10));
 // ──────────────────────────────────────────────────────────────────────────────
 
 function toDataUrl(svg) {
