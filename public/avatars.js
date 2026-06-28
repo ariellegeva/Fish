@@ -41,9 +41,11 @@ try {
   });
 } catch (err) {
   console.warn('Dicebear CDN failed, falling back to URL avatars:', err);
-  // Fallback: use plain CDN URLs (no custom options)
   window.DICEBEAR_AVATARS = SEEDS.map(seed => ({
     seed,
     url: `https://api.dicebear.com/9.x/miniavs/svg?seed=${seed}`
   }));
 }
+
+// Signal to app.js that avatars are ready (timing-safe)
+document.dispatchEvent(new CustomEvent('dicebear-ready'));

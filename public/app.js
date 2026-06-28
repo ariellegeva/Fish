@@ -167,18 +167,26 @@ function updateNav() {
 
 // ===================== EMOJI / COUNT =====================
 function buildAvatarGrids() {
-  const avatars = window.DICEBEAR_AVATARS || [];
-  // Set default icon to first avatar
-  if (avatars.length > 0) {
-    state.adminIcon = avatars[0].url;
-    state.joinIcon  = avatars[0].url;
-    ['admin','join'].forEach(prefix => {
-      document.getElementById(`${prefix}-icon-preview`).innerHTML =
-        `<img src="${avatars[0].url}">`;
-    });
+  if (window.DICEBEAR_AVATARS) {
+    _fillAvatarGrids();
+  } else {
+    // Avatars not ready yet — wait for the module to finish
+    document.addEventListener('dicebear-ready', _fillAvatarGrids, { once: true });
   }
+}
+
+function _fillAvatarGrids() {
+  const avatars = window.DICEBEAR_AVATARS || [];
+  if (avatars.length === 0) return;
+
+  // Set default icon to first avatar
+  state.adminIcon = avatars[0].url;
+  state.joinIcon  = avatars[0].url;
   ['admin','join'].forEach(prefix => {
+    document.getElementById(`${prefix}-icon-preview`).innerHTML =
+      `<img src="${avatars[0].url}">`;
     const grid = document.getElementById(`${prefix}-emoji-grid`);
+    grid.innerHTML = ''; // clear any previous items
     avatars.forEach(({ seed, url }) => {
       const d = document.createElement('div');
       d.className = 'emoji-opt avatar-opt';
