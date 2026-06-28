@@ -688,24 +688,17 @@ label { display: block; font-size: 13px; color: var(--text-muted); margin-bottom
   flex-shrink: 0;
 }
 
-#hand-container-v2 {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  grid-auto-rows: auto;
-  align-content: start;
-  align-items: start;
-  gap: 8px;
-  padding: 0 10px 10px;
-  overflow-y: auto;
+/* Scrollable wrapper — mirrors #ask-suit-list */
+#lp-cards-scroll {
   flex: 1;
-  /* Prevent grid from stretching rows to fill flex height */
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 8px 12px;
   min-height: 0;
 }
-#hand-container-v2 .ask-card-pick {
-  /* Card height should match its content, not the grid row */
-  height: fit-content;
-  min-height: unset;
-}
+
+/* #hand-container-v2 now just inherits .ask-card-grid layout */
+#hand-container-v2 { }
 
 /* hand-card-v2 removed — hand cards now use .ask-card-pick directly */
 
