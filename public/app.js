@@ -810,7 +810,7 @@ function showEventOverlay({ askerId, askerName, targetId, targetName, card, hadC
 
   // Phase 1: question
   cardEl.innerHTML = buildCardFaceHTML(card, 'sm');
-  names.textContent = `${askerLabel} → ${targetLabel}`;
+  names.innerHTML = `<strong>${askerLabel}</strong> → <strong>${targetLabel}</strong>`;
   msgEl.textContent = `asked for the ${card}`;
   symEl.textContent = '?';
   box.className = '';
@@ -821,7 +821,7 @@ function showEventOverlay({ askerId, askerName, targetId, targetName, card, hadC
   eventOverlayTimer = setTimeout(() => {
     if (hadCard) {
       box.classList.add('got-it');
-      msgEl.textContent = `✓ ${targetLabel} had the ${card}`;
+      msgEl.innerHTML = `<strong>${targetLabel}</strong> had the ${card}`;
       symEl.textContent = '!';
       const stackEl = document.getElementById(`stack-${targetId}`);
       if (stackEl) {
@@ -831,7 +831,7 @@ function showEventOverlay({ askerId, askerName, targetId, targetName, card, hadC
       }
     } else {
       box.classList.add('no-card');
-      msgEl.textContent = `✗ ${targetLabel} doesn't have the ${card}`;
+      msgEl.innerHTML = `<strong>${targetLabel}</strong> doesn't have the ${card}`;
       symEl.textContent = '✕';
     }
     eventOverlayTimer = null;
@@ -989,15 +989,15 @@ function restoreAskResultOverlay({ askerId, askerName, targetId, targetName, car
   msgEl.style.cssText = '';
 
   cardEl.innerHTML = buildCardFaceHTML(card, 'sm');
-  names.textContent = `${askerLabel} → ${targetLabel}`;
+  names.innerHTML = `<strong>${askerLabel}</strong> → <strong>${targetLabel}</strong>`;
 
   if (hadCard) {
     box.className = 'got-it';
-    msgEl.textContent = `✓ ${targetLabel} had the ${card}`;
+    msgEl.innerHTML = `<strong>${targetLabel}</strong> had the ${card}`;
     symEl.textContent = '!';
   } else {
     box.className = 'no-card';
-    msgEl.textContent = `✗ ${targetLabel} doesn't have the ${card}`;
+    msgEl.innerHTML = `<strong>${targetLabel}</strong> doesn't have the ${card}`;
     symEl.textContent = '✕';
   }
 
