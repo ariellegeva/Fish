@@ -419,7 +419,6 @@ function renderOvalPlayers() {
     tile.innerHTML = `
       <div class="player-avatar-big avatar-t${p.team}">${isImg(p.icon) ? `<img src="${p.icon}">` : p.icon}</div>
       <div class="player-oval-name">${p.name}${p.id === room.adminId ? ' 👑' : ''}${isMe ? ' (you)' : ''}</div>
-      <span class="player-oval-team t${p.team}">T${p.team}</span>
       ${stackHTML}`;
     container.appendChild(tile);
   });
