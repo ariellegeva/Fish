@@ -505,6 +505,23 @@ label { display: block; font-size: 13px; color: var(--text-muted); margin-bottom
 #win-divider {
   width: 100%; border: none; border-top: 2px solid var(--border-light); margin: 4px 0;
 }
+.win-suit-row {
+  display: flex; flex-wrap: wrap; gap: 6px; justify-content: center;
+  margin-top: 10px; min-height: 24px;
+}
+.win-suit-badge {
+  font-size: 13px; font-weight: 800; padding: 4px 12px;
+  border-radius: 20px; font-family: 'Nunito', sans-serif;
+}
+.win-suit-badge.t1 { background: rgba(58,107,196,.15); color: var(--team1); border: 1.5px solid rgba(58,107,196,.35); }
+.win-suit-badge.t2 { background: rgba(192,57,43,.12); color: var(--team2); border: 1.5px solid rgba(192,57,43,.3); }
+.win-team-tag {
+  font-size: 13px; font-weight: 800; margin-bottom: 8px;
+  text-transform: uppercase; letter-spacing: .06em;
+}
+.win-team-tag.t1 { color: var(--team1); }
+.win-team-tag.t2 { color: var(--team2); }
+
 #win-new-game-btn {
   margin-top: 8px;
   background: #4caf6e; border-color: #2d6a40;

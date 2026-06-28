@@ -378,6 +378,7 @@ io.on('connection', (socket) => {
       io.to(code).emit('game_ended', {
         scores: room.scores,
         players: room.players.map(p => ({ id: p.id, name: p.name, icon: p.icon, team: p.team })),
+        claimedSuits: room.claimedSuits,
       });
     }
 
@@ -436,6 +437,7 @@ io.on('connection', (socket) => {
       io.to(code).emit('game_ended', {
         scores: room.scores,
         players: room.players.map(p => ({ id: p.id, name: p.name, icon: p.icon, team: p.team })),
+        claimedSuits: room.claimedSuits,
       });
     }
     updateClaimOnlyTeam(room);

@@ -1269,37 +1269,41 @@ function appendChat(msg) {
 }
 
 // ===================== WIN OVERLAY =====================
-function showWinOverlay({ scores, players }) {
+function showWinOverlay({ scores, players, claimedSuits = [] }) {
   // Delay slightly so it follows the final claim sound
   setTimeout(playGameEndSound, 600);
   const t1 = scores.team1, t2 = scores.team2;
   const winTeam = t1 > t2 ? 1 : t2 > t1 ? 2 : 0; // 0 = tie
 
-  const playerRow = (team) => players
-    .filter(p => p.team === team)
-    .map(p => `<div class="win-player">
-      <div class="win-player-avatar avatar-t${p.team}">
-        ${isImg(p.icon) ? `<img src="${p.icon}">` : p.icon}
-      </div>
-      <div class="win-player-name">${p.name}</div>
-    </div>`).join('');
+  const suitBadges = (team) => {
+    const suits = claimedSuits.filter(s => s.winner === team);
+    if (suits.length === 0) return `<span style="font-size:13px;color:var(--text-muted)">No suits</span>`;
+    return suits.map(s => `<span class="win-suit-badge t${team}">${s.name}</span>`).join('');
+  };
+
+  const teamBlock = (team) => `
+    <div class="win-players-row">${
+      players.filter(p => p.team === team).map(p => `<div class="win-player">
+        <div class="win-player-avatar avatar-t${p.team}">${isImg(p.icon) ? `<img src="${p.icon}">` : p.icon}</div>
+        <div class="win-player-name">${p.name}</div>
+      </div>`).join('')
+    }</div>
+    <div class="win-suit-row">${suitBadges(team)}</div>`;
 
   if (winTeam === 0) {
-    // Tie
     document.getElementById('win-winning-section').classList.add('hidden');
     document.getElementById('win-losing-section').classList.add('hidden');
     document.getElementById('win-tie-section').classList.remove('hidden');
     document.getElementById('win-tie-players').innerHTML =
-      `<div class="win-players-row">${playerRow(1)}${playerRow(2)}</div>`;
+      `<div style="margin-bottom:16px"><div class="win-team-tag t1">Team 1</div>${teamBlock(1)}</div>
+       <div><div class="win-team-tag t2">Team 2</div>${teamBlock(2)}</div>`;
   } else {
     const loseTeam = winTeam === 1 ? 2 : 1;
     document.getElementById('win-winning-section').classList.remove('hidden');
     document.getElementById('win-losing-section').classList.remove('hidden');
     document.getElementById('win-tie-section').classList.add('hidden');
-    document.getElementById('win-winning-players').innerHTML =
-      `<div class="win-players-row">${playerRow(winTeam)}</div>`;
-    document.getElementById('win-losing-players').innerHTML =
-      `<div class="win-players-row">${playerRow(loseTeam)}</div>`;
+    document.getElementById('win-winning-players').innerHTML = teamBlock(winTeam);
+    document.getElementById('win-losing-players').innerHTML = teamBlock(loseTeam);
   }
 
   document.getElementById('win-overlay').classList.remove('hidden');
