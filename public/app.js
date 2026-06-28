@@ -437,14 +437,11 @@ function renderHand() {
     const red = cardRed(card);
     const rank = cardRank(card), suit = cardSuit(card);
     const isSelectedAsk = state.selectedCard === card;
-    const isInPanel    = state.panelCards.includes(card);
-    const isDimmed     = suitCards && !suitCards.includes(card) && !isSelectedAsk;
-    const cls = ['hand-card-v2', red?'red':'black',
-      isSelectedAsk?'selected':'', isInPanel?'in-panel':'', isDimmed?'dimmed':''].join(' ');
+    const isDimmed = suitCards && !suitCards.includes(card) && !isSelectedAsk;
+    const cls = ['hand-card-v2', red?'red':'black', isSelectedAsk?'selected':'', isDimmed?'dimmed':''].join(' ');
     return `<div class="${cls}" onclick="handleCardClick('${card}')">
-      <div class="rank-top">${rank}<span class="suit-small">${suit}</span></div>
-      <div class="suit-center">${suit}</div>
-      <div class="rank-bottom">${rank}</div>
+      <span class="acp-rank">${rank}</span>
+      <span class="acp-suit">${suit}</span>
     </div>`;
   }).join('');
 }
@@ -470,10 +467,10 @@ function renderActionStrip() {
   }
 
   if (myTurn && outOfCards) {
-    askArea.style.display = 'none'; passArea.style.display = 'flex';
+    askArea.style.display = 'none'; passArea.style.display = 'block';
     renderPassTargets();
   } else if (myTurn) {
-    passArea.style.display = 'none'; askArea.style.display = 'flex';
+    passArea.style.display = 'none'; askArea.style.display = 'flex'; askArea.style.flexDirection = 'column';
     const targetPlayer = state.selectedTarget && room.players.find(p => p.id === state.selectedTarget);
     const hs = state.selectedCard && cardToHalfSuit(state.selectedCard);
     const red = state.selectedCard && cardRed(state.selectedCard);

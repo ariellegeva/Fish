@@ -669,51 +669,55 @@ label { display: block; font-size: 13px; color: var(--text-muted); margin-bottom
 #hand-container-v2 {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 6px;
-  padding: 0 10px;
+  gap: 8px;
+  padding: 0 10px 10px;
   overflow-y: auto;
   flex: 1;
 }
 
-/* Cards smaller in left panel */
+/* Hand cards in left panel — same compact style as ask card picker */
 .hand-card-v2 {
-  width: 100%; height: 88px;
-  padding: 4px 6px;
-}
-.hand-card-v2 .rank-top { font-size: 13px; }
-.hand-card-v2 .rank-top .suit-small { font-size: 11px; }
-.hand-card-v2 .suit-center { font-size: 26px; }
-.hand-card-v2 .rank-bottom { font-size: 13px; }
-
-#lp-actions {
-  padding: 8px 10px;
-  flex-shrink: 0;
-  border-top: 1px solid #3a3a3a;
+  width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+  border: 2.5px solid #2d2d2d;
+  border-radius: 12px;
+  padding: 10px 6px;
+  cursor: pointer;
+  transition: all .15s;
+  box-shadow: 0 2px 0 #2d2d2d;
+  font-family: 'Nunito', sans-serif;
+  gap: 2px;
+  min-height: 70px;
 }
+.hand-card-v2:hover { transform: translateY(-2px); box-shadow: 0 4px 0 #2d2d2d; }
+.hand-card-v2.selected { border-color: #3a6bc4; background: #e8f4ff; box-shadow: 0 2px 0 #3a6bc4; }
+.hand-card-v2.dimmed   { opacity: .3; pointer-events: none; }
+.hand-card-v2.red   { color: #c0392b; }
+.hand-card-v2.black { color: #2d2d2d; }
+.hand-card-v2.selected { color: #3a6bc4 !important; }
+.hand-card-v2 .acp-rank { font-size: 22px; font-weight: 900; line-height: 1; }
+.hand-card-v2 .acp-suit { font-size: 20px; line-height: 1; }
 
-#action-strip {
-  display: flex; flex-direction: column; gap: 6px; align-items: stretch;
-}
+#action-strip { display: flex; flex-direction: column; gap: 6px; }
 #ask-summary { font-size: 12px; font-weight: 700; color: #8a7a6a; }
 #ask-summary .ask-hi { color: #fff; font-weight: 800; }
 #ask-summary .ask-card-badge {
   display: inline-block; background: #fff; color: #2d2d2d;
-  border-radius: 6px; padding: 1px 7px; font-weight: 900; font-size: 13px;
-  vertical-align: middle;
+  border-radius: 6px; padding: 1px 7px; font-weight: 900; font-size: 13px; vertical-align: middle;
 }
 #ask-summary .ask-card-badge.red { color: #c0392b; }
 
 #ask-btn {
-  width: 100%;
   background: #4caf6e; border-color: #2d6a40;
-  font-size: 15px; font-weight: 900; padding: 9px;
+  font-size: 15px; font-weight: 900; padding: 10px;
   border-radius: 10px; box-shadow: 0 3px 0 #2d6a40;
 }
 #ask-btn:not(:disabled):hover  { transform: translateY(-1px); box-shadow: 0 4px 0 #2d6a40; }
-#ask-btn:not(:disabled):active { transform: translateY(1px); box-shadow: 0 1px 0 #2d6a40; }
+#ask-btn:not(:disabled):active { transform: translateY(1px);  box-shadow: 0 1px 0 #2d6a40; }
 #ask-btn:disabled { background: #3a3a3a; border-color: #3a3a3a; box-shadow: none; color: #5a4a3a; }
 
 #pass-area { font-size: 11px; }
@@ -754,16 +758,12 @@ label { display: block; font-size: 13px; color: var(--text-muted); margin-bottom
 .lp-suit-badge.t2  { background: rgba(192,57,43,.18); color: #ff8a7a; }
 .lp-suit-badge.mid { background: rgba(100,90,80,.2); color: #6a5a4a; }
 
-/* ===== GAME TABLE — square ===== */
+/* ===== GAME TABLE ===== */
 #game-table-area {
   flex: 1;
   background: var(--bg-felt);
   position: relative;
   overflow: hidden;
-  /* Keep it square using JS-set width/height, or let flex handle it */
-  aspect-ratio: 1;
-  max-width: calc(100vh - 48px);
-  align-self: stretch;
 }
 
 /* Turn banner — top-left */

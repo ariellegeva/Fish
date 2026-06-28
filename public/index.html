@@ -217,15 +217,9 @@
     <div id="lp-cards-header">My cards <span id="hand-count"></span></div>
     <div id="hand-container-v2"></div>
 
-    <div id="lp-actions">
-      <div id="action-strip" style="display:none">
-        <span id="ask-summary"></span>
-        <button id="ask-btn" onclick="submitAsk()" disabled>Ask</button>
-      </div>
-      <div id="pass-area" style="display:none">
-        <div style="font-size:11px;color:#8a7a6a;font-weight:700;margin-bottom:6px">Out of cards — pass to:</div>
-        <div id="pass-targets"></div>
-      </div>
+    <div id="pass-area" style="display:none;padding:8px 10px;border-top:1px solid #3a3a3a">
+      <div style="font-size:11px;color:#8a7a6a;font-weight:700;margin-bottom:6px">Out of cards — pass to:</div>
+      <div id="pass-targets"></div>
     </div>
 
     <div id="lp-score">
@@ -267,6 +261,10 @@
     <div id="rp-ask" class="hidden">
       <div class="rp-hint">Pick a half-suit you hold, then a card, then a player</div>
       <div id="ask-suit-list"></div>
+      <div id="action-strip" style="display:none;padding:10px 12px;border-top:1px solid #3a3a3a;flex-shrink:0">
+        <span id="ask-summary"></span>
+        <button id="ask-btn" onclick="submitAsk()" disabled style="margin-top:8px;width:100%">Ask</button>
+      </div>
     </div>
     <div id="rp-claim" class="hidden">
       <div class="rp-hint">Pick a suit, assign each card to a player</div>
