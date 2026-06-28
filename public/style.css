@@ -409,10 +409,17 @@ label { display: block; font-size: 13px; color: var(--text-muted); margin-bottom
 }
 .claim-reveal-avatar img { width: 100%; height: 100%; object-fit: cover; }
 .claim-reveal-name {
-  font-size: 15px; font-weight: 800; color: #fff;
-  min-width: 80px; flex-shrink: 0;
+  font-size: 14px; font-weight: 800; color: #fff;
+  min-width: 60px; flex-shrink: 0;
 }
-.claim-reveal-cards { display: flex; gap: 6px; flex-wrap: wrap; }
+/* Stacked overlapping cards — all 6 fit on one line */
+.claim-reveal-cards {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+}
+.claim-reveal-cards .card-face { flex-shrink: 0; }
+.claim-reveal-cards .card-face + .card-face { margin-left: -20px; }
 
 /* Two-column claim layout */
 .claim-two-col {
