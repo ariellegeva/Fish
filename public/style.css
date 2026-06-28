@@ -935,8 +935,9 @@ label { display: block; font-size: 13px; color: var(--text-muted); margin-bottom
 
 .card-stack-count {
   position: absolute;
-  top: -4px;
-  right: -12px;
+  top: -26px;
+  left: 50%;
+  transform: translateX(-50%);
   background: #c0392b;
   color: #fff;
   border-radius: 50%;
