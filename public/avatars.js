@@ -1,8 +1,4 @@
 // ── AVATAR CONFIG ─────────────────────────────────────────────────────────────
-// Edit OPTIONS to match your Dicebear playground settings.
-// Edit SEEDS to change which avatars appear in the picker.
-// ──────────────────────────────────────────────────────────────────────────────
-
 const OPTIONS = {
   bodyColor:          ['e05a33','ff4dd8','52a0bc','b07be5','ff2424','812828'],
   bodyColorFill:      ['linear'],
@@ -24,28 +20,58 @@ const SEEDS = [
   'fff','Lionl','nor','peet','spar','tell','Wolfy','Zebra',
   'Monkey','Penguin','Koala','Dolphin'
 ];
-
 // ──────────────────────────────────────────────────────────────────────────────
-// Load Dicebear from CDN and generate all avatars before DOMContentLoaded
-// ──────────────────────────────────────────────────────────────────────────────
-try {
-  const { Style, Avatar } = await import('https://cdn.jsdelivr.net/npm/@dicebear/core/+esm');
 
-  const res = await fetch('https://cdn.jsdelivr.net/npm/@dicebear/styles/miniavs.min.json');
-  const definition = await res.json();
-  const style = new Style(definition);
+function toDataUrl(svg) {
+  return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+}
 
-  window.DICEBEAR_AVATARS = SEEDS.map(seed => {
-    const svg = new Avatar(style, { ...OPTIONS, seed }).toString();
-    return { seed, url: 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg) };
-  });
-} catch (err) {
-  console.warn('Dicebear CDN failed, falling back to URL avatars:', err);
+function fallback() {
+  console.warn('[avatars] Using plain CDN fallback (no custom options)');
   window.DICEBEAR_AVATARS = SEEDS.map(seed => ({
     seed,
     url: `https://api.dicebear.com/9.x/miniavs/svg?seed=${seed}`
   }));
 }
 
-// Signal to app.js that avatars are ready (timing-safe)
+try {
+  // esm.sh handles npm → ESM properly and resolves the correct version
+  console.log('[avatars] Loading @dicebear/core from esm.sh...');
+  const core = await import('https://esm.sh/@dicebear/core');
+  console.log('[avatars] Core exports:', Object.keys(core).join(', '));
+
+  const { Style, Avatar, createAvatar } = core;
+
+  if (Style && Avatar) {
+    // v10 API
+    console.log('[avatars] Using v10 API (Style + Avatar)');
+    const res = await fetch('https://esm.sh/@dicebear/styles/miniavs.min.json');
+    if (!res.ok) throw new Error(`miniavs.min.json fetch failed: ${res.status}`);
+    const definition = await res.json();
+    const style = new Style(definition);
+    window.DICEBEAR_AVATARS = SEEDS.map(seed => {
+      const svg = new Avatar(style, { ...OPTIONS, seed }).toString();
+      return { seed, url: toDataUrl(svg) };
+    });
+    console.log('[avatars] ✓ Generated', window.DICEBEAR_AVATARS.length, 'avatars with full custom options');
+
+  } else if (createAvatar) {
+    // v9 API
+    console.log('[avatars] Using v9 API (createAvatar)');
+    const { default: miniavs } = await import('https://esm.sh/@dicebear/miniavs');
+    window.DICEBEAR_AVATARS = SEEDS.map(seed => {
+      const svg = createAvatar(miniavs, { ...OPTIONS, seed }).toString();
+      return { seed, url: toDataUrl(svg) };
+    });
+    console.log('[avatars] ✓ Generated', window.DICEBEAR_AVATARS.length, 'avatars (v9, some options may differ)');
+
+  } else {
+    throw new Error('Neither Style/Avatar nor createAvatar found in core module');
+  }
+
+} catch (err) {
+  console.error('[avatars] Failed:', err.message);
+  fallback();
+}
+
 document.dispatchEvent(new CustomEvent('dicebear-ready'));
