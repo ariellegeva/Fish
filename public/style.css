@@ -877,15 +877,6 @@ label { display: block; font-size: 13px; color: var(--text-muted); margin-bottom
   display: flex; gap: 8px; align-items: center;
 }
 
-#hand-container-v2 {
-  display: flex;
-  gap: 6px;
-  overflow-x: auto;
-  padding-bottom: 4px;
-  padding-top: 12px; /* room for hover lift */
-  scrollbar-width: thin;
-  scrollbar-color: var(--dark2) transparent;
-}
 
 /* Action bar inside strip */
 #action-strip {
