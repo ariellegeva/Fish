@@ -501,6 +501,7 @@ function renderOvalPlayers() {
         ${stackHTML}
         <div class="player-avatar-wrap">
           <div class="player-avatar-big avatar-t${p.team}">${isImg(p.icon) ? `<img src="${p.icon}">` : p.icon}</div>
+          ${cardCount > 0 ? `<span class="card-count-corner">${cardCount}</span>` : ''}
           ${p.id === room.adminId ? '<span class="admin-crown">👑</span>' : ''}
         </div>
       </div>
@@ -520,10 +521,7 @@ function buildCardFan(count, playerId) {
     const angle = show === 1 ? 28 : start + (spread / (show - 1)) * i;
     return `<div class="card-fan-card" style="transform:rotate(${angle}deg)"></div>`;
   }).join('');
-  return `<div class="card-fan" id="stack-${playerId}">
-    ${cards}
-    <span class="card-stack-count">${count}</span>
-  </div>`;
+  return `<div class="card-fan" id="stack-${playerId}">${cards}</div>`;
 }
 
 // ===================== HAND =====================

@@ -1034,6 +1034,22 @@ label { display: block; font-size: 13px; color: var(--text-muted); margin-bottom
   font-family: 'Nunito', sans-serif;
 }
 
+/* Card count badge — top-left corner of avatar */
+.card-count-corner {
+  position: absolute;
+  top: -4px; left: -6px;
+  background: #c0392b;
+  color: #fff;
+  border-radius: 50%;
+  width: 26px; height: 26px;
+  font-size: 13px; font-weight: 800;
+  display: flex; align-items: center; justify-content: center;
+  z-index: 12;
+  border: 2px solid #fff;
+  font-family: 'Nunito', sans-serif;
+  box-shadow: 0 1px 3px rgba(0,0,0,.3);
+}
+
 /* Crown on avatar corner */
 .player-avatar-wrap { position: relative; display: inline-block; flex-shrink: 0; z-index: 2; }
 .admin-crown {
