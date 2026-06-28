@@ -773,10 +773,10 @@ function awardSuit(halfSuitId, winner) {
 // ===================== EVENT OVERLAY =====================
 function buildCardFaceHTML(card, size = 'sm') {
   const red = cardRed(card); const rank = cardRank(card); const suit = cardSuit(card);
-  const w = size === 'lg' ? '80px' : '58px';
-  const h = size === 'lg' ? '112px' : '82px';
-  const fs = size === 'lg' ? '36px' : '26px';
-  const rfs = size === 'lg' ? '18px' : '13px';
+  const w   = size === 'md' ? '90px'  : size === 'lg' ? '80px'  : '58px';
+  const h   = size === 'md' ? '126px' : size === 'lg' ? '112px' : '82px';
+  const fs  = size === 'md' ? '44px'  : size === 'lg' ? '36px'  : '26px';
+  const rfs = size === 'md' ? '18px'  : size === 'lg' ? '18px'  : '13px';
   return `<div class="card-face ${red?'red':'black'}" style="width:${w};height:${h};flex-shrink:0">
     <div class="rank-top" style="font-size:${rfs}">${rank}<span class="suit-small" style="font-size:calc(${rfs} - 2px)">${suit}</span></div>
     <div class="suit-center" style="font-size:${fs}">${suit}</div>
@@ -803,39 +803,29 @@ function showEventOverlay({ askerId, askerName, targetId, targetName, card, hadC
   const cardEl  = document.getElementById('event-card-el');
   const names   = document.getElementById('event-names');
   const msgEl   = document.getElementById('event-msg');
-  const symEl   = document.getElementById('event-sym');
-
-  // Clear any running timer
   if (eventOverlayTimer) { clearTimeout(eventOverlayTimer); eventOverlayTimer = null; }
 
-  // Phase 1: question
-  cardEl.innerHTML = buildCardFaceHTML(card, 'sm');
+  // Phase 1: question — names + card, no message
+  cardEl.innerHTML = buildCardFaceHTML(card, 'md');
   names.innerHTML = `<strong>${askerLabel}</strong> → <strong>${targetLabel}</strong>`;
-  msgEl.textContent = `asked for the ${card}`;
-  symEl.textContent = '?';
+  msgEl.textContent = '';
+  msgEl.className = 'hidden-msg';
   box.className = '';
   overlay.classList.remove('hidden');
-  overlay.classList.add('show');
 
-  // Phase 2: show result after 1.4s — stays until next question
+  // Phase 2: result after 1.4s
   eventOverlayTimer = setTimeout(() => {
+    msgEl.className = '';
     if (hadCard) {
-      box.classList.add('got-it');
-      msgEl.innerHTML = `<strong>${targetLabel}</strong> had the ${card}`;
-      symEl.textContent = '!';
+      box.className = 'got-it';
+      msgEl.textContent = 'YES!';
       const stackEl = document.getElementById(`stack-${targetId}`);
-      if (stackEl) {
-        stackEl.classList.remove('card-flip-anim');
-        void stackEl.offsetWidth;
-        stackEl.classList.add('card-flip-anim');
-      }
+      if (stackEl) { stackEl.classList.remove('card-flip-anim'); void stackEl.offsetWidth; stackEl.classList.add('card-flip-anim'); }
     } else {
-      box.classList.add('no-card');
-      msgEl.innerHTML = `<strong>${targetLabel}</strong> doesn't have the ${card}`;
-      symEl.textContent = '✕';
+      box.className = 'no-card';
+      msgEl.textContent = 'NO!';
     }
     eventOverlayTimer = null;
-    // Overlay stays visible until next ask_result clears it
   }, 1400);
 }
 
@@ -982,27 +972,23 @@ function restoreAskResultOverlay({ askerId, askerName, targetId, targetName, car
   const cardEl  = document.getElementById('event-card-el');
   const names   = document.getElementById('event-names');
   const msgEl   = document.getElementById('event-msg');
-  const symEl   = document.getElementById('event-sym');
-
-  // Reset any claim-mode inline styles
   box.style.cssText = '';
   msgEl.style.cssText = '';
 
-  cardEl.innerHTML = buildCardFaceHTML(card, 'sm');
+  cardEl.innerHTML = buildCardFaceHTML(card, 'md');
   names.innerHTML = `<strong>${askerLabel}</strong> → <strong>${targetLabel}</strong>`;
 
   if (hadCard) {
     box.className = 'got-it';
-    msgEl.innerHTML = `<strong>${targetLabel}</strong> had the ${card}`;
-    symEl.textContent = '!';
+    msgEl.textContent = 'YES!';
+    msgEl.className = '';
   } else {
     box.className = 'no-card';
-    msgEl.innerHTML = `<strong>${targetLabel}</strong> doesn't have the ${card}`;
-    symEl.textContent = '✕';
+    msgEl.textContent = 'NO!';
+    msgEl.className = '';
   }
 
   overlay.classList.remove('hidden');
-  overlay.classList.add('show');
 }
 
 function renderScoreOverlay() {
