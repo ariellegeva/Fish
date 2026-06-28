@@ -601,12 +601,6 @@ function renderClaimPanel() {
   if (state.claimSuit) {
     const hs = HALF_SUITS.find(h => h.id === state.claimSuit);
     if (hs) {
-      // Team selector
-      html += `<div class="ask-card-divider">Which team holds all the cards?</div>
-        <div class="claim-team-row">
-          <button class="claim-team-btn ${state.claimTeam===1?'sel-t1':''}" onclick="selectClaimTeam(1)">Team 1</button>
-          <button class="claim-team-btn ${state.claimTeam===2?'sel-t2':''}" onclick="selectClaimTeam(2)">Team 2</button>
-        </div>`;
 
       // Card-player assignment grid
       html += `<div class="ask-card-divider">Assign each card to a player</div>
@@ -646,10 +640,18 @@ function renderClaimPanel() {
     submitBtn.onclick = submitClaim;
     document.getElementById('rp-claim').appendChild(submitBtn);
   }
-  const allAssigned = state.claimSuit && state.claimTeam &&
-    HALF_SUITS.find(h => h.id === state.claimSuit)?.cards.every(c => state.claimAssignments[c]);
-  submitBtn.disabled = !allAssigned || !myTeamsTurn;
-  if (!myTeamsTurn) submitBtn.textContent = "Not your team's turn";
+  const hs2 = HALF_SUITS.find(h => h.id === state.claimSuit);
+  const allAssigned = hs2 && hs2.cards.every(c => state.claimAssignments[c]);
+  const assignedTeams = new Set(
+    Object.values(state.claimAssignments)
+      .map(id => room.players.find(p => p.id === id)?.team)
+      .filter(Boolean)
+  );
+  const mixedTeams = assignedTeams.size > 1;
+
+  submitBtn.disabled = !allAssigned || mixedTeams || !myTeamsTurn;
+  if (!myTeamsTurn)  submitBtn.textContent = "Not your team's turn";
+  else if (mixedTeams) submitBtn.textContent = 'Players from different teams selected';
   else submitBtn.textContent = 'Submit claim';
 }
 
@@ -691,15 +693,19 @@ function assignClaimPlayer(playerId) {
 
 function submitClaim() {
   const room = state.room; if (!room) return;
-  if (!state.claimSuit || !state.claimTeam) return;
+  if (!state.claimSuit) return;
+  // Infer team from assigned players
+  const anyAssignedId = Object.values(state.claimAssignments)[0];
+  const claimedForTeam = room.players.find(p => p.id === anyAssignedId)?.team;
+  if (!claimedForTeam) return;
   socket.emit('claim_suit', {
     halfSuitId: state.claimSuit,
-    claimedForTeam: state.claimTeam,
+    claimedForTeam,
     assignments: state.claimAssignments,
   }, (res) => {
     if (!res.ok) return alert(res.error || 'Could not submit claim');
     // Result is shown via claim_result socket event — no alert needed
-    state.claimSuit = null; state.claimTeam = null; state.claimAssignments = {};
+    state.claimSuit = null; state.claimAssignments = {};
     state.claimSelectedCard = null;
     renderClaimPanel();
   });
