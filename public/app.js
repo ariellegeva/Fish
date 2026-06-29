@@ -101,6 +101,7 @@ let state = {
   selectedCount: 6,
   room: null,
   myHand: [],
+  handOrder: [],   // player-controlled ordering of myHand (drag to rearrange)
   myId: null,
   // asking state
   askSuit: null,
@@ -163,6 +164,7 @@ function initSocket() {
 
   socket.on('your_hand', (hand) => {
     state.myHand = hand;
+    reconcileHandOrder(hand);
     state.panelCards = state.panelCards.filter(c => hand.includes(c));
     // If selected card no longer in hand, clear ask state
     if (state.selectedCard && !hand.includes(state.selectedCard)) clearAsk();
@@ -552,9 +554,38 @@ function buildCardFan(count, playerId) {
   return `<div class="card-fan" id="stack-${playerId}">${cards}</div>`;
 }
 
+// ===================== HAND ORDERING =====================
+const SUIT_ORDER = ['♠', '♥', '♦', '♣'];
+const RANK_ORDER = ['2','3','4','5','6','7','8','9','10','J','Q','K','A'];
+
+// Sort a list of cards grouped by suit, ascending by rank within each suit.
+function sortGroupedBySuit(cards) {
+  return [...cards].sort((a, b) => {
+    const sa = SUIT_ORDER.indexOf(cardSuit(a)), sb = SUIT_ORDER.indexOf(cardSuit(b));
+    if (sa !== sb) return sa - sb;
+    return RANK_ORDER.indexOf(cardRank(a)) - RANK_ORDER.indexOf(cardRank(b));
+  });
+}
+
+// Keep state.handOrder in sync with the actual hand, preserving the player's
+// manual arrangement. Cards no longer held are dropped; newly gained cards are
+// inserted grouped by suit so the hand stays tidy.
+function reconcileHandOrder(hand) {
+  const handSet = new Set(hand);
+  const kept = state.handOrder.filter(c => handSet.has(c));
+  const keptSet = new Set(kept);
+  const added = sortGroupedBySuit(hand.filter(c => !keptSet.has(c)));
+  state.handOrder = kept.concat(added);
+}
+
 // ===================== HAND =====================
 function renderHand() {
   const container = document.getElementById('hand-container-v2');
+  // Keep the manual ordering in sync if myHand was set outside the your_hand handler
+  if (state.handOrder.length !== state.myHand.length ||
+      !state.handOrder.every(c => state.myHand.includes(c))) {
+    reconcileHandOrder(state.myHand);
+  }
   document.getElementById('hand-count').textContent = `(${state.myHand.length})`;
 
   // Which cards are in the selected suit (for dimming others)
@@ -562,23 +593,65 @@ function renderHand() {
     ? (HALF_SUITS.find(h => h.id === state.askSuit)?.cards || [])
     : null;
 
-  container.innerHTML = state.myHand.map(card => {
+  container.innerHTML = state.handOrder.map(card => {
     const red = cardRed(card);
     const rank = cardRank(card), suit = cardSuit(card);
     const isSelectedAsk = state.selectedCard === card;
     const isDimmed = suitCards && !suitCards.includes(card) && !isSelectedAsk;
-    const cls = ['ask-card-pick', red?'red':'black', isSelectedAsk?'selected':'', isDimmed?'dimmed':''].join(' ');
-    return `<div class="${cls}" onclick="handleCardClick('${card}')">
+    // Hand cards are drag-only — they no longer select a card for ASK.
+    const cls = ['ask-card-pick', 'hand-draggable', red?'red':'black', isSelectedAsk?'selected':'', isDimmed?'dimmed':''].join(' ');
+    return `<div class="${cls}" draggable="true" data-card="${card}"
+      ondragstart="onHandDragStart(event,'${card}')"
+      ondragover="onHandDragOver(event,'${card}')"
+      ondragleave="onHandDragLeave(event,'${card}')"
+      ondrop="onHandDrop(event,'${card}')"
+      ondragend="onHandDragEnd(event)">
       <span class="acp-rank">${rank}</span>
       <span class="acp-suit">${suit}</span>
     </div>`;
   }).join('');
 }
 
-function handleCardClick(card) {
-  const suitCards = state.askSuit ? (HALF_SUITS.find(h => h.id === state.askSuit)?.cards || []) : null;
-  if (suitCards && !suitCards.includes(card)) return;
-  selectCard(card);
+// ===================== HAND DRAG-TO-REARRANGE =====================
+let draggedCard = null;
+
+function onHandDragStart(e, card) {
+  draggedCard = card;
+  e.dataTransfer.effectAllowed = 'move';
+  try { e.dataTransfer.setData('text/plain', card); } catch {}
+  e.currentTarget.classList.add('dragging');
+}
+
+function onHandDragOver(e, card) {
+  if (!draggedCard || card === draggedCard) return;
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  e.currentTarget.classList.add('drag-over');
+}
+
+function onHandDragLeave(e) {
+  e.currentTarget.classList.remove('drag-over');
+}
+
+function onHandDrop(e, targetCard) {
+  e.preventDefault();
+  e.currentTarget.classList.remove('drag-over');
+  if (!draggedCard || draggedCard === targetCard) return;
+  const order = state.handOrder.slice();
+  const from = order.indexOf(draggedCard);
+  const to = order.indexOf(targetCard);
+  if (from < 0 || to < 0) return;
+  order.splice(from, 1);
+  order.splice(to, 0, draggedCard);
+  state.handOrder = order;
+  draggedCard = null;
+  renderHand();
+}
+
+function onHandDragEnd() {
+  draggedCard = null;
+  document.querySelectorAll('#hand-container-v2 .ask-card-pick')
+    .forEach(el => el.classList.remove('dragging', 'drag-over'));
 }
 
 // ===================== ACTION STRIP =====================
@@ -1321,7 +1394,7 @@ function exitGame() {
 function goHome() {
   localStorage.removeItem('fish_session');
   if (eventOverlayTimer) { clearTimeout(eventOverlayTimer); eventOverlayTimer = null; }
-  state.room = null; state.myHand = []; state.inCreateFlow = false;
+  state.room = null; state.myHand = []; state.handOrder = []; state.inCreateFlow = false;
   state.selectedCard = null; state.selectedTarget = null;
   state.panelCards = []; state.askSuit = null; state.rightPanelMode = 'ask';
   state.claimSuit = null; state.claimTeam = null; state.claimAssignments = {};

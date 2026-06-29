@@ -359,7 +359,9 @@ io.on('connection', (socket) => {
 
     let result, winner;
     if (wrongTeam) {
-      winner = claimedForTeam === 1 ? 2 : 1;
+      // A wrong claim always awards the claimer's OPPONENTS — never the
+      // claimer's own team, regardless of which team the cards were claimed for.
+      winner = claimer.team === 1 ? 2 : 1;
       room.scores[`team${winner}`]++;
       result = 'wrong_team';
       addLog(room, `${claimer.name} claimed ${hs.name}${hs.suit} for Team ${claimedForTeam} — WRONG! Team ${winner} gets it.`);

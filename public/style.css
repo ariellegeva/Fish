@@ -812,6 +812,14 @@ label { display: block; font-size: 13px; color: var(--text-muted); margin-bottom
 .ask-card-pick.selected { color: #3a6bc4 !important; }
 .ask-card-pick.dimmed   { opacity: .3; pointer-events: none; }
 
+/* Hand cards are drag-to-rearrange, not clickable for ASK */
+.ask-card-pick.hand-draggable { cursor: grab; }
+.ask-card-pick.hand-draggable:active { cursor: grabbing; }
+/* Keep dimmed hand cards draggable (dimming is just a visual cue here) */
+.ask-card-pick.hand-draggable.dimmed { pointer-events: auto; }
+.ask-card-pick.hand-draggable.dragging { opacity: .4; }
+.ask-card-pick.hand-draggable.drag-over { border-color: #3a6bc4; box-shadow: -3px 0 0 #3a6bc4; }
+
 .acp-rank { font-size: 22px; font-weight: 900; line-height: 1; }
 .acp-suit { font-size: 20px; line-height: 1; }
 
