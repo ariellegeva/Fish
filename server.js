@@ -153,8 +153,6 @@ io.on('connection', (socket) => {
       adminId: socket.id,
       settings: {
         numPlayers: settings.numPlayers || 6,
-        timerEnabled: settings.timerEnabled || false,
-        timerSeconds: settings.timerSeconds || 60,
         chatEnabled: settings.chatEnabled !== false,
         teamSelection: settings.teamSelection || false,
       },
@@ -454,7 +452,7 @@ io.on('connection', (socket) => {
     if (!room || !room.settings.chatEnabled) return;
     const player = room.players.find(p => p.id === socket.id);
     if (!player) return;
-    io.to(code).emit('chat_message', { name: player.name, icon: player.icon, text, ts: Date.now() });
+    io.to(code).emit('chat_message', { id: player.id, name: player.name, icon: player.icon, text, ts: Date.now() });
   });
 
   // --- Exit game ---

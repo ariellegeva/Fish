@@ -36,6 +36,14 @@ function playNotes(notes, masterGain = 0.18) {
   });
 }
 
+// Message sent — short two-note "swoosh/blip" (used when a question is asked)
+function playMessageSentSound() {
+  playNotes([
+    { f: 660.00, t: 0.00, d: 0.10, type: 'sine', gain: 0.9 },
+    { f: 990.00, t: 0.07, d: 0.12, type: 'sine', gain: 0.7 },
+  ], 0.14);
+}
+
 // Correct claim — bright ascending "hooray" arpeggio
 function playCorrectSound() {
   playNotes([
@@ -102,6 +110,7 @@ let state = {
   room: null,
   myHand: [],
   handOrder: [],   // player-controlled ordering of myHand (drag to rearrange)
+  bubbles: {},     // playerId -> speech-bubble text currently shown above their avatar
   myId: null,
   // asking state
   askSuit: null,
@@ -173,7 +182,10 @@ function initSocket() {
     renderPanelTray();
   });
 
-  socket.on('chat_message', (msg) => appendChat(msg));
+  socket.on('chat_message', (msg) => {
+    appendChat(msg);
+    if (msg.id) showPlayerBubble(msg.id, msg.text);
+  });
 
   socket.on('player_exited', ({ name }) => {
     document.getElementById('exit-modal-text').textContent = `${name} exited the game.`;
@@ -314,9 +326,6 @@ function selectCount(n) {
   state.selectedCount = n;
   document.querySelectorAll('.count-btn').forEach(b => b.classList.toggle('selected', parseInt(b.textContent) === n));
 }
-function toggleTimerSub() {
-  document.getElementById('timer-sub').classList.toggle('hidden', !document.getElementById('timer-toggle').checked);
-}
 
 // ===================== ADMIN FLOW =====================
 function goAdminSettings() {
@@ -330,8 +339,6 @@ function createRoom() {
   const icon = state.adminIcon;
   const settings = {
     numPlayers: state.selectedCount,
-    timerEnabled: document.getElementById('timer-toggle').checked,
-    timerSeconds: parseInt(document.getElementById('timer-seconds').value) || 60,
     chatEnabled: document.getElementById('chat-toggle').checked,
     teamSelection: document.getElementById('team-selection-toggle').checked,
   };
@@ -466,6 +473,8 @@ function renderAll() {
 // ===================== GAME TAB =====================
 function renderGameTab() {
   const room = state.room; if (!room) return;
+  const qmb = document.getElementById('quick-msg-box');
+  if (qmb) qmb.style.display = room.settings.chatEnabled ? '' : 'none';
   renderTurnBanner();
   renderOvalPlayers();
   renderHand();
@@ -526,8 +535,10 @@ function renderOvalPlayers() {
       tile.onclick = () => selectTarget(p.id);
     }
 
+    const bubble = state.bubbles[p.id];
     tile.innerHTML = `
       <div class="player-fan-root">
+        ${bubble ? `<div class="player-bubble">${escHtml(bubble)}</div>` : ''}
         ${stackHTML}
         <div class="player-avatar-wrap">
           <div class="player-avatar-big avatar-t${p.team}">${isImg(p.icon) ? `<img src="${p.icon}">` : p.icon}</div>
@@ -535,7 +546,7 @@ function renderOvalPlayers() {
           ${p.id === room.adminId ? '<span class="admin-crown">👑</span>' : ''}
         </div>
       </div>
-      <div class="player-oval-name">${p.name}${isMe ? ' (you)' : ''}</div>`;
+      <div class="player-oval-name name-t${p.team}">${p.name}${isMe ? ' (you)' : ''}</div>`;
     container.appendChild(tile);
   });
 }
@@ -1060,6 +1071,8 @@ function buildCardFaceHTML(card, size = 'sm') {
 }
 
 function showEventOverlay({ askerId, askerName, targetId, targetName, card, hadCard }) {
+  // Sound: a question was asked (plays for everyone)
+  playMessageSentSound();
   // Store for score-overlay restore
   state.lastAskResult = { askerId, askerName, targetId, targetName, card, hadCard };
 
@@ -1082,7 +1095,7 @@ function showEventOverlay({ askerId, askerName, targetId, targetName, card, hadC
 
   // Phase 1: question — names + card, no message
   cardEl.innerHTML = buildCardFaceHTML(card, 'md');
-  names.innerHTML = `<strong>${askerLabel}</strong> → <strong>${targetLabel}</strong>`;
+  names.innerHTML = `<strong>${askerLabel}</strong> asked <strong>${targetLabel}</strong> for:`;
   msgEl.textContent = '';
   msgEl.className = 'hidden-msg';
   box.className = '';
@@ -1253,7 +1266,7 @@ function restoreAskResultOverlay({ askerId, askerName, targetId, targetName, car
   msgEl.style.cssText = '';
 
   cardEl.innerHTML = buildCardFaceHTML(card, 'md');
-  names.innerHTML = `<strong>${askerLabel}</strong> → <strong>${targetLabel}</strong>`;
+  names.innerHTML = `<strong>${askerLabel}</strong> asked <strong>${targetLabel}</strong> for:`;
 
   if (hadCard) {
     box.className = 'got-it';
@@ -1299,10 +1312,6 @@ function renderSettings() {
   document.getElementById('settings-view').innerHTML = `
     <div class="toggle-row"><div class="toggle-label">Players<span class="sub">${s.numPlayers} players</span></div></div>
     <div class="toggle-row">
-      <div class="toggle-label">Turn time limit<span class="sub">${s.timerEnabled ? s.timerSeconds+'s per turn' : 'Off'}</span></div>
-      ${isAdmin&&room.phase==='lobby'?`<label class="toggle"><input type="checkbox" ${s.timerEnabled?'checked':''} onchange="updateSetting('timerEnabled',this.checked)"><span class="toggle-slider"></span></label>`:''}
-    </div>
-    <div class="toggle-row">
       <div class="toggle-label">Chat<span class="sub">${s.chatEnabled?'Enabled':'Disabled'}</span></div>
       ${isAdmin?`<label class="toggle"><input type="checkbox" ${s.chatEnabled?'checked':''} onchange="updateSetting('chatEnabled',this.checked)"><span class="toggle-slider"></span></label>`:''}
     </div>
@@ -1331,6 +1340,28 @@ function sendChat() {
   const inp = document.getElementById('chat-input');
   const text = inp.value.trim(); if (!text) return;
   socket.emit('chat_message', { text }); inp.value = '';
+}
+
+// Quick reaction buttons next to the table ("Wait!" / "OK").
+// Logged to chat like any message; the chat_message echo drives the bubble.
+function sendQuickMessage(text) {
+  socket.emit('chat_message', { text });
+}
+
+// ===================== PLAYER SPEECH BUBBLES =====================
+const _bubbleTimers = {};
+function bubbleText(text) {
+  return text.length > 5 ? text.slice(0, 5) + '...' : text;
+}
+function showPlayerBubble(playerId, text) {
+  state.bubbles[playerId] = bubbleText(text);
+  if (_bubbleTimers[playerId]) clearTimeout(_bubbleTimers[playerId]);
+  _bubbleTimers[playerId] = setTimeout(() => {
+    delete state.bubbles[playerId];
+    delete _bubbleTimers[playerId];
+    renderOvalPlayers();
+  }, 4000);
+  renderOvalPlayers();
 }
 function appendChat(msg) {
   const box = document.getElementById('chat-box');
@@ -1394,7 +1425,7 @@ function exitGame() {
 function goHome() {
   localStorage.removeItem('fish_session');
   if (eventOverlayTimer) { clearTimeout(eventOverlayTimer); eventOverlayTimer = null; }
-  state.room = null; state.myHand = []; state.handOrder = []; state.inCreateFlow = false;
+  state.room = null; state.myHand = []; state.handOrder = []; state.bubbles = {}; state.inCreateFlow = false;
   state.selectedCard = null; state.selectedTarget = null;
   state.panelCards = []; state.askSuit = null; state.rightPanelMode = 'ask';
   state.claimSuit = null; state.claimTeam = null; state.claimAssignments = {};

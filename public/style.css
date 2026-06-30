@@ -997,6 +997,9 @@ label { display: block; font-size: 13px; color: var(--text-muted); margin-bottom
   text-align: center;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
+/* Names tinted by team (dark enough to read on the cream table) */
+.player-oval-name.name-t1 { color: #2b5391; }
+.player-oval-name.name-t2 { color: #a8311f; }
 
 /* ===== CARD FAN (above player avatar) ===== */
 .player-fan-root {
@@ -1006,6 +1009,68 @@ label { display: block; font-size: 13px; color: var(--text-muted); margin-bottom
   align-items: center;
   padding-top: 14px;
 }
+
+/* ===== PLAYER SPEECH BUBBLE (chat / quick reactions) ===== */
+.player-bubble {
+  position: absolute;
+  left: calc(100% - 6px);
+  bottom: calc(100% - 18px);
+  z-index: 20;
+  background: #2d2d2d;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 800;
+  font-family: 'Nunito', sans-serif;
+  padding: 7px 12px;
+  border-radius: 14px 14px 14px 2px;
+  white-space: nowrap;
+  box-shadow: 0 3px 8px rgba(0,0,0,.3);
+  animation: bubble-pop .18s ease-out;
+}
+.player-bubble::after {
+  content: '';
+  position: absolute;
+  left: 6px; bottom: -6px;
+  border-width: 7px 7px 0 0;
+  border-style: solid;
+  border-color: #2d2d2d transparent transparent transparent;
+}
+@keyframes bubble-pop {
+  from { transform: scale(.7); opacity: 0; }
+  to   { transform: scale(1);  opacity: 1; }
+}
+
+/* ===== QUICK REACTION BOX ===== */
+#quick-msg-box {
+  position: absolute;
+  top: 16px; right: 16px;
+  z-index: 15;
+  background: #2f4a3a;
+  border: 3px solid #1f3328;
+  border-radius: 14px;
+  padding: 8px 12px 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,.25);
+}
+#quick-msg-title {
+  color: #d8e8dc;
+  font-size: 15px; font-weight: 800;
+  margin-bottom: 8px;
+}
+#quick-msg-btns { display: flex; gap: 10px; }
+.quick-msg-btn {
+  background: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 22px;
+  font-size: 16px; font-weight: 800;
+  font-family: 'Nunito', sans-serif;
+  color: #2d2d2d;
+  cursor: pointer;
+  box-shadow: 0 2px 0 rgba(0,0,0,.2);
+  transition: transform .1s, box-shadow .1s;
+}
+.quick-msg-btn:hover { transform: translateY(-1px); box-shadow: 0 3px 0 rgba(0,0,0,.2); }
+.quick-msg-btn:active { transform: translateY(1px); box-shadow: 0 1px 0 rgba(0,0,0,.2); }
 
 /* Fan pokes out from the right side of the avatar, behind it */
 .card-fan {

@@ -65,22 +65,6 @@
 
     <div class="toggle-row">
       <div class="toggle-label">
-        Turn time limit
-        <span class="sub">Automatically end a player's turn after a set time</span>
-      </div>
-      <label class="toggle">
-        <input type="checkbox" id="timer-toggle" onchange="toggleTimerSub()">
-        <span class="toggle-slider"></span>
-      </label>
-    </div>
-    <div id="timer-sub" class="hidden" style="padding:12px 0 0">
-      <label>Seconds per turn</label>
-      <input type="number" id="timer-seconds" value="60" min="10" max="300" style="width:120px">
-    </div>
-
-
-    <div class="toggle-row">
-      <div class="toggle-label">
         Chat
         <span class="sub">Enable in-game text chat</span>
       </div>
@@ -222,11 +206,11 @@
         <div class="lp-score-box mid"><div class="lp-score-num" id="lp-s-mid">0</div><div class="lp-score-lbl">Mid</div></div>
         <div class="lp-score-box t2"><div class="lp-score-num" id="lp-s-t2">0</div><div class="lp-score-lbl">T2</div></div>
       </div>
-      <div class="lp-score-team-label t1">Team 1</div>
+      <div class="lp-score-team-label t1">Team 1 Suits</div>
       <div id="lp-won-t1" class="lp-won-suits"></div>
-      <div class="lp-score-team-label t2">Team 2</div>
+      <div class="lp-score-team-label t2">Team 2 Suits</div>
       <div id="lp-won-t2" class="lp-won-suits"></div>
-      <div class="lp-score-team-label mid">Middle</div>
+      <div class="lp-score-team-label mid">Middle Suits</div>
       <div id="lp-won-mid" class="lp-won-suits"></div>
     </div>
   </div>
@@ -234,6 +218,16 @@
   <!-- Square game table -->
   <div id="game-table-area">
     <div id="turn-banner-v2"></div>
+
+    <!-- Quick reactions — send without opening chat -->
+    <div id="quick-msg-box">
+      <div id="quick-msg-title">messages</div>
+      <div id="quick-msg-btns">
+        <button class="quick-msg-btn" onclick="sendQuickMessage('Wait!')">Wait!</button>
+        <button class="quick-msg-btn" onclick="sendQuickMessage('OK')">OK</button>
+      </div>
+    </div>
+
     <div id="oval-players"></div>
 
     <!-- Ask/result event overlay (circular) -->
