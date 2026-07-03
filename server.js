@@ -61,14 +61,34 @@ const DIST = {
 
 function dealCards(room) {
   const deck = shuffle(buildDeck());
-  const dist = DIST[room.settings.numPlayers];
   const team1Players = room.players.filter(p => p.team === 1);
   const team2Players = room.players.filter(p => p.team === 2);
+  const n = room.players.length;
+
+  const splitAmong = (total, players) => {
+    if (players.length === 0) return [];
+    const base = Math.floor(total / players.length);
+    const extra = total % players.length;
+    return shuffle(Array.from({ length: players.length }, (_, i) => base + (i < extra ? 1 : 0)));
+  };
+
+  let t1counts, t2counts;
+  const dist = DIST[n];
+  if (dist && dist.team1.length === team1Players.length && dist.team2.length === team2Players.length) {
+    t1counts = shuffle([...dist.team1]);
+    t2counts = shuffle([...dist.team2]);
+  } else if (team2Players.length === 0) {
+    t1counts = splitAmong(96, team1Players);
+    t2counts = [];
+  } else if (team1Players.length === 0) {
+    t1counts = [];
+    t2counts = splitAmong(96, team2Players);
+  } else {
+    t1counts = splitAmong(48, team1Players);
+    t2counts = splitAmong(48, team2Players);
+  }
 
   let idx = 0;
-  const t1counts = shuffle([...dist.team1]);
-  const t2counts = shuffle([...dist.team2]);
-
   team1Players.forEach((p, i) => {
     p.hand = deck.slice(idx, idx + t1counts[i]);
     idx += t1counts[i];
@@ -152,7 +172,6 @@ io.on('connection', (socket) => {
       code,
       adminId: socket.id,
       settings: {
-        numPlayers: settings.numPlayers || 6,
         chatEnabled: settings.chatEnabled !== false,
         teamSelection: settings.teamSelection || false,
       },
@@ -173,12 +192,11 @@ io.on('connection', (socket) => {
     const room = rooms[code];
     if (!room) return cb({ ok: false, error: 'Room not found' });
     if (room.phase !== 'lobby') return cb({ ok: false, error: 'Game already started' });
-    if (room.players.length >= room.settings.numPlayers) return cb({ ok: false, error: 'Room full' });
     if (room.players.find(p => p.name.toLowerCase() === name.toLowerCase()))
       return cb({ ok: false, error: 'That name is already taken — choose another.' });
     socket.join(code);
     socket.data = { code, peeking: true };
-    cb({ ok: true, room: publicRoom(room), maxPerTeam: Math.ceil(room.settings.numPlayers / 2) });
+    cb({ ok: true, room: publicRoom(room) });
   });
 
   // --- Player joins room ---
@@ -189,8 +207,11 @@ io.on('connection', (socket) => {
       // Rejoin: find existing player
       const existing = room.players.find(p => p.name === name);
       if (existing) {
+        const oldId = existing.id;
         existing.id = socket.id;
         existing.connected = true;
+        if (room.currentTurn === oldId) room.currentTurn = socket.id;
+        if (room.adminId === oldId) room.adminId = socket.id;
         socket.join(code);
         socket.data = { code, playerId: socket.id };
         io.to(code).emit('room_update', publicRoom(room));
@@ -198,37 +219,35 @@ io.on('connection', (socket) => {
       }
       return cb({ ok: false, error: 'Game already started' });
     }
-    const maxPerTeam = Math.ceil(room.settings.numPlayers / 2);
-
-    // If this socket already has a player in the room, treat as a team change
     const mine = room.players.find(p => p.id === socket.id);
     if (mine) {
-      if (team && team !== mine.team) {
-        const teamCount = room.players.filter(p => p.team === team && p.id !== socket.id).length;
-        if (teamCount >= maxPerTeam) return cb({ ok: false, error: `Team ${team} is full.` });
-        mine.team = team;
-      }
+      mine.connected = true;
+      socket.join(code);
+      socket.data = { code, playerId: socket.id };
       io.to(code).emit('room_update', publicRoom(room));
       return cb({ ok: true, room: publicRoom(room), myHand: mine.hand || [] });
     }
 
-    if (room.players.length >= room.settings.numPlayers) return cb({ ok: false, error: 'Room full' });
-    if (room.players.find(p => p.name.toLowerCase() === name.toLowerCase()))
-      return cb({ ok: false, error: 'That name is already taken — choose another.' });
+    const existingByName = room.players.find(p => p.name.toLowerCase() === name.toLowerCase());
+    if (existingByName) {
+      const oldId = existingByName.id;
+      existingByName.id = socket.id;
+      existingByName.connected = true;
+      if (icon) existingByName.icon = icon;
+      if (room.adminId === oldId) room.adminId = socket.id;
+      socket.join(code);
+      socket.data = { code, playerId: socket.id };
+      io.to(code).emit('room_update', publicRoom(room));
+      return cb({ ok: true, room: publicRoom(room), myHand: existingByName.hand || [] });
+    }
 
     let assignedTeam = team;
     if (!room.settings.teamSelection) {
-      // Auto-assign alternating
-      const t1 = room.players.filter(p=>p.team===1).length;
-      const t2 = room.players.filter(p=>p.team===2).length;
+      const t1 = room.players.filter(p => p.team === 1).length;
+      const t2 = room.players.filter(p => p.team === 2).length;
       assignedTeam = t1 <= t2 ? 1 : 2;
     } else if (!assignedTeam) {
-      assignedTeam = 1; // default until they pick
-    }
-    // Enforce team cap on explicit team choice
-    if (team) {
-      const teamCount = room.players.filter(p => p.team === team).length;
-      if (teamCount >= maxPerTeam) return cb({ ok: false, error: `Team ${team} is full.` });
+      assignedTeam = 1;
     }
 
     const player = { id: socket.id, name, icon, team: assignedTeam, hand: [], connected: true };
@@ -238,6 +257,51 @@ io.on('connection', (socket) => {
     addLog(room, `${name} joined the game.`);
     io.to(code).emit('room_update', publicRoom(room));
     cb({ ok: true, room: publicRoom(room), myHand: [] });
+  });
+
+  // --- Change team in lobby (admin reassigns anyone; players move self if allowed) ---
+  socket.on('change_team', ({ playerId, team }, cb) => {
+    const { code } = socket.data || {};
+    const room = rooms[code];
+    if (!room || room.phase !== 'lobby') return cb && cb({ ok: false, error: 'Not in lobby' });
+    team = Number(team);
+    if (team !== 1 && team !== 2) return cb && cb({ ok: false, error: 'Invalid team' });
+
+    const isAdmin = room.adminId === socket.id;
+    const targetId = playerId || socket.id;
+    const target = room.players.find(p => p.id === targetId);
+    if (!target) return cb && cb({ ok: false, error: 'Player not found' });
+    if (!isAdmin && targetId !== socket.id) return cb && cb({ ok: false, error: 'Not allowed' });
+    if (!isAdmin && !room.settings.teamSelection) return cb && cb({ ok: false, error: 'Team changes not allowed' });
+    if (target.team === team) return cb && cb({ ok: true, room: publicRoom(room) });
+
+    target.team = team;
+    addLog(room, `${target.name} moved to Team ${team}.`);
+    io.to(code).emit('room_update', publicRoom(room));
+    cb && cb({ ok: true, room: publicRoom(room) });
+  });
+
+  // --- Admin kicks player from lobby ---
+  socket.on('kick_player', ({ playerId }, cb) => {
+    const { code } = socket.data || {};
+    const room = rooms[code];
+    if (!room || room.phase !== 'lobby') return cb && cb({ ok: false, error: 'Not in lobby' });
+    if (room.adminId !== socket.id) return cb && cb({ ok: false, error: 'Not admin' });
+    if (playerId === socket.id) return cb && cb({ ok: false, error: 'Cannot kick yourself' });
+
+    const target = room.players.find(p => p.id === playerId);
+    if (!target) return cb && cb({ ok: false, error: 'Player not found' });
+
+    room.players = room.players.filter(p => p.id !== playerId);
+    addLog(room, `${target.name} was removed from the lobby.`);
+    io.to(playerId).emit('kicked');
+    const kickedSocket = io.sockets.sockets.get(playerId);
+    if (kickedSocket) {
+      kickedSocket.leave(code);
+      kickedSocket.data = {};
+    }
+    io.to(code).emit('room_update', publicRoom(room));
+    cb && cb({ ok: true, room: publicRoom(room) });
   });
 
   // --- Admin starts game ---
@@ -480,6 +544,23 @@ io.on('connection', (socket) => {
     room.settings = { ...room.settings, ...newSettings };
     io.to(code).emit('room_update', publicRoom(room));
     cb && cb({ ok: true });
+  });
+
+  // --- WebRTC signaling relay (media is peer-to-peer; server only relays) ---
+  socket.on('rtc_signal', ({ toId, data }) => {
+    const { code } = socket.data || {};
+    if (!code) return;
+    const room = rooms[code];
+    if (!room) return;
+    const target = room.players.find(p => p.id === toId);
+    if (!target) return;
+    io.to(toId).emit('rtc_signal', { fromId: socket.id, data });
+  });
+
+  socket.on('rtc_ready', () => {
+    const { code } = socket.data || {};
+    if (!code) return;
+    socket.to(code).emit('rtc_peer_ready', { id: socket.id });
   });
 
   // --- Disconnect ---
