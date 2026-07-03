@@ -1,9 +1,19 @@
 // ===================== WEBRTC VIDEO/AUDIO =====================
 // Peer-to-peer mesh via Socket.IO signaling. Requires secure context (HTTPS or localhost).
-// TODO: add TURN for restrictive NATs — STUN alone may fail across some networks.
+// STUN alone fails across restrictive/symmetric NATs, so we also provide TURN relays.
+
+const METERED_USER = '549f459ae4a48f00b18c813d';
+const METERED_CRED = 'FzJf5f9bRbxp0GLm';
 
 const RTC_CONFIG = {
-  iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
+  iceServers: [
+    { urls: 'stun:stun.l.google.com:19302' },
+    { urls: 'stun:stun.relay.metered.ca:80' },
+    { urls: 'turn:global.relay.metered.ca:80', username: METERED_USER, credential: METERED_CRED },
+    { urls: 'turn:global.relay.metered.ca:80?transport=tcp', username: METERED_USER, credential: METERED_CRED },
+    { urls: 'turn:global.relay.metered.ca:443', username: METERED_USER, credential: METERED_CRED },
+    { urls: 'turns:global.relay.metered.ca:443?transport=tcp', username: METERED_USER, credential: METERED_CRED },
+  ],
 };
 
 const peers = {};       // peerId -> { pc, stream, audioNodes, pendingCandidates, videoEl }
@@ -15,11 +25,6 @@ let pendingLocalStream = null; // stream waiting for avatar DOM after render
 
 function selfId() {
   return socket?.id || state?.myId;
-}
-
-function shouldInitiate(peerId) {
-  const me = selfId();
-  return me && peerId && me < peerId;
 }
 
 function videoSizeClass() {
@@ -137,17 +142,53 @@ async function flushPendingCandidates(peerId) {
   }
 }
 
-async function createPeer(peerId, isInitiator) {
+// "Perfect negotiation": both sides may create a peer connection and add
+// tracks, and offers are driven by onnegotiationneeded. Glare (both offering
+// at once) is resolved deterministically — the polite peer yields and rolls
+// back, the impolite peer ignores the colliding offer. Lower id is impolite.
+function isPolite(peerId) {
+  return selfId() > peerId;
+}
+
+function addLocalTracks(peerId) {
+  const entry = peers[peerId];
+  if (!entry?.pc || !localStream) return;
+  localStream.getTracks().forEach(t => {
+    const has = entry.pc.getSenders().some(s => s.track?.kind === t.kind);
+    if (!has) {
+      try { entry.pc.addTrack(t, localStream); } catch (e) { /* already added */ }
+    }
+  });
+}
+
+async function createPeer(peerId) {
   if (peerId === selfId() || peers[peerId]?.pc) return;
-  // Only the initiator needs local media; answerers can receive without sharing
-  if (isInitiator && !localStream) return;
 
   const pc = new RTCPeerConnection(RTC_CONFIG);
-  peers[peerId] = { ...(peers[peerId] || {}), pc, pendingCandidates: [] };
+  const entry = peers[peerId] = {
+    ...(peers[peerId] || {}),
+    pc,
+    pendingCandidates: [],
+    polite: isPolite(peerId),
+    makingOffer: false,
+    ignoreOffer: false,
+  };
 
   if (localStream) {
     localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
   }
+
+  pc.onnegotiationneeded = async () => {
+    try {
+      entry.makingOffer = true;
+      await pc.setLocalDescription();
+      socket.emit('rtc_signal', { toId: peerId, data: { type: 'offer', sdp: pc.localDescription } });
+    } catch (e) {
+      console.warn('RTC negotiation failed', e);
+    } finally {
+      entry.makingOffer = false;
+    }
+  };
 
   pc.onicecandidate = (e) => {
     if (e.candidate) {
@@ -165,46 +206,50 @@ async function createPeer(peerId, isInitiator) {
 
   pc.onconnectionstatechange = () => {
     const s = pc.connectionState;
-    if (s === 'failed' || s === 'closed' || s === 'disconnected') closePeer(peerId);
-  };
-
-  if (isInitiator) {
-    try {
-      const offer = await pc.createOffer();
-      await pc.setLocalDescription(offer);
-      socket.emit('rtc_signal', { toId: peerId, data: { type: 'offer', sdp: offer } });
-    } catch (e) {
-      console.warn('RTC offer failed', e);
+    if (s === 'failed') {
+      // ICE died — the impolite side drives a restart, polite side follows.
+      if (!entry.polite) { try { pc.restartIce(); } catch (e) { /* ignore */ } }
+    } else if (s === 'closed') {
       closePeer(peerId);
     }
-  }
+  };
 }
 
 async function handleSignal({ fromId, data }) {
   if (!data || fromId === selfId()) return;
 
   if (!peers[fromId]?.pc) {
-    await createPeer(fromId, false);
+    await createPeer(fromId);
   }
   const entry = peers[fromId];
-  if (!entry?.pc) return;
+  const pc = entry?.pc;
+  if (!pc) return;
 
   try {
-    if (data.type === 'offer') {
-      await entry.pc.setRemoteDescription(data.sdp);
+    if (data.type === 'offer' || data.type === 'answer') {
+      // Collision: an incoming offer arrives while we're mid-offer or not stable.
+      const offerCollision =
+        data.type === 'offer' && (entry.makingOffer || pc.signalingState !== 'stable');
+      entry.ignoreOffer = !entry.polite && offerCollision;
+      if (entry.ignoreOffer) return;
+
+      // The polite peer implicitly rolls back its own offer here.
+      await pc.setRemoteDescription(data.sdp);
       await flushPendingCandidates(fromId);
-      const answer = await entry.pc.createAnswer();
-      await entry.pc.setLocalDescription(answer);
-      socket.emit('rtc_signal', { toId: fromId, data: { type: 'answer', sdp: answer } });
-    } else if (data.type === 'answer') {
-      await entry.pc.setRemoteDescription(data.sdp);
-      await flushPendingCandidates(fromId);
+      if (data.type === 'offer') {
+        await pc.setLocalDescription();
+        socket.emit('rtc_signal', { toId: fromId, data: { type: 'answer', sdp: pc.localDescription } });
+      }
     } else if (data.type === 'ice' && data.candidate) {
-      if (entry.pc.remoteDescription) {
-        await entry.pc.addIceCandidate(data.candidate);
-      } else {
-        entry.pendingCandidates = entry.pendingCandidates || [];
-        entry.pendingCandidates.push(data.candidate);
+      try {
+        if (pc.remoteDescription) {
+          await pc.addIceCandidate(data.candidate);
+        } else {
+          entry.pendingCandidates = entry.pendingCandidates || [];
+          entry.pendingCandidates.push(data.candidate);
+        }
+      } catch (e) {
+        if (!entry.ignoreOffer) console.warn('RTC ice error', e);
       }
     }
   } catch (e) {
@@ -212,10 +257,10 @@ async function handleSignal({ fromId, data }) {
   }
 }
 
-function connectToPeer(peerId, forceInitiate) {
+function connectToPeer(peerId) {
   if (!mediaEnabled || !localStream || peerId === selfId()) return;
   if (peers[peerId]?.pc) return;
-  createPeer(peerId, forceInitiate ?? shouldInitiate(peerId));
+  createPeer(peerId);
 }
 
 function syncPeers() {
@@ -257,22 +302,6 @@ function updatePanning() {
   }
 }
 
-async function upgradePeerWithLocalMedia(peerId) {
-  const entry = peers[peerId];
-  if (!entry?.pc || !localStream) return;
-  localStream.getTracks().forEach(t => {
-    const hasKind = entry.pc.getSenders().some(s => s.track?.kind === t.kind);
-    if (!hasKind) entry.pc.addTrack(t, localStream);
-  });
-  try {
-    const offer = await entry.pc.createOffer();
-    await entry.pc.setLocalDescription(offer);
-    socket.emit('rtc_signal', { toId: peerId, data: { type: 'offer', sdp: offer } });
-  } catch (e) {
-    console.warn('RTC renegotiation failed', e);
-  }
-}
-
 async function startMedia() {
   if (mediaEnabled) return;
   getAudioCtx?.(); // user gesture — resume AudioContext
@@ -298,8 +327,10 @@ async function startMedia() {
   if (state?.room?.players) {
     for (const p of state.room.players) {
       if (p.id === selfId()) continue;
-      if (peers[p.id]?.pc) await upgradePeerWithLocalMedia(p.id);
-      else connectToPeer(p.id, true);
+      // If a connection already exists (e.g. we joined as a receiver), just add
+      // our tracks — onnegotiationneeded renegotiates automatically.
+      if (peers[p.id]?.pc) addLocalTracks(p.id);
+      else connectToPeer(p.id);
     }
   }
   updateRtcButtons();
