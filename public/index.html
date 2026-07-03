@@ -215,16 +215,6 @@
   <div id="game-table-area">
     <div id="turn-banner-v2"></div>
 
-    <!-- Quick reactions — send without opening chat -->
-    <div id="quick-msg-box">
-      <div id="quick-msg-title">messages</div>
-      <div id="quick-msg-btns">
-        <button class="quick-msg-btn" onclick="sendQuickMessage('Wait!')">Wait!</button>
-        <button class="quick-msg-btn" onclick="sendQuickMessage('OK')">OK</button>
-        <button class="quick-msg-btn" onclick="sendQuickMessage('Grrr')">Grrr</button>
-      </div>
-    </div>
-
     <div id="oval-players"></div>
 
     <!-- Ask/result event overlay (circular) -->
@@ -258,6 +248,11 @@
     </div>
     <div id="rp-chat" class="hidden">
       <div class="chat-box" id="chat-box"></div>
+      <div id="quick-msg-btns">
+        <button class="quick-msg-btn" onclick="sendQuickMessage('Wait!')">Wait!</button>
+        <button class="quick-msg-btn" onclick="sendQuickMessage('OK')">OK</button>
+        <button class="quick-msg-btn" onclick="sendQuickMessage('Grrr')">Grrr</button>
+      </div>
       <div class="chat-input-row">
         <input type="text" id="chat-input" placeholder="Type a message..." onkeydown="if(event.key==='Enter')sendChat()">
         <button onclick="sendChat()">Send</button>

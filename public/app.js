@@ -499,8 +499,6 @@ function startGame() {
 function renderGameTab() {
   const room = state.room; if (!room) return;
   const chatOn = room.settings.chatEnabled;
-  const qmb = document.getElementById('quick-msg-box');
-  if (qmb) qmb.style.display = chatOn ? '' : 'none';
   const chatTab = document.getElementById('rp-tab-chat');
   if (chatTab) chatTab.style.display = chatOn ? '' : 'none';
   if (!chatOn && state.rightPanelMode === 'chat') state.rightPanelMode = 'ask';
