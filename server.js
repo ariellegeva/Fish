@@ -78,14 +78,14 @@ function dealCards(room) {
     t1counts = shuffle([...dist.team1]);
     t2counts = shuffle([...dist.team2]);
   } else if (team2Players.length === 0) {
-    t1counts = splitAmong(96, team1Players);
+    t1counts = splitAmong(48, team1Players);
     t2counts = [];
   } else if (team1Players.length === 0) {
     t1counts = [];
-    t2counts = splitAmong(96, team2Players);
-  } else {
-    t1counts = splitAmong(48, team1Players);
     t2counts = splitAmong(48, team2Players);
+  } else {
+    t1counts = splitAmong(24, team1Players);
+    t2counts = splitAmong(24, team2Players);
   }
 
   let idx = 0;
@@ -526,9 +526,18 @@ io.on('connection', (socket) => {
     if (!room) return cb && cb({ ok: true });
     const player = room.players.find(p => p.id === socket.id);
     if (player) {
-      addLog(room, `${player.name} exited the game.`);
-      io.to(code).emit('player_exited', { name: player.name, icon: player.icon });
+      const wasAdmin = room.adminId === socket.id;
+      addLog(room, room.phase === 'lobby'
+        ? `${player.name} left the lobby.`
+        : `${player.name} exited the game.`);
       room.players = room.players.filter(p => p.id !== socket.id);
+      if (room.phase === 'lobby' && wasAdmin && room.players.length > 0) {
+        room.adminId = room.players[0].id;
+        addLog(room, `${room.players[0].name} is now the host.`);
+      }
+      if (room.phase === 'playing') {
+        io.to(code).emit('player_exited', { name: player.name, icon: player.icon });
+      }
       io.to(code).emit('room_update', publicRoom(room));
     }
     socket.leave(code);

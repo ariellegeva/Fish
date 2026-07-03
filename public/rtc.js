@@ -24,7 +24,7 @@ function shouldInitiate(peerId) {
 
 function videoSizeClass() {
   const n = state?.room?.players?.length || 0;
-  // 2× avatar for ≤6 seats; ~1.5× when crowded to reduce overlap
+  // compact when crowded to reduce overlap
   return n > 6 ? 'has-video compact' : 'has-video';
 }
 

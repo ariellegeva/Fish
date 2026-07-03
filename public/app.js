@@ -188,6 +188,7 @@ function initSocket() {
   });
 
   socket.on('player_exited', ({ name }) => {
+    if (state.room?.phase !== 'playing') return;
     document.getElementById('exit-modal-text').textContent = `${name} exited the game.`;
     document.getElementById('exit-modal').classList.remove('hidden');
   });
@@ -571,6 +572,7 @@ function renderOvalPlayers() {
         ${bubble ? `<div class="player-bubble">${escHtml(bubble)}</div>` : ''}
         ${stackHTML}
         <div class="player-avatar-wrap">
+          ${isCurrent ? '<span class="turn-badge">TURN</span>' : ''}
           <div class="player-avatar-big avatar-t${p.team}" id="avatar-${p.id}"><span class="avatar-fallback">${isImg(p.icon) ? `<img src="${p.icon}">` : p.icon}</span></div>
           ${cardCount > 0 ? `<span class="card-count-corner">${cardCount}</span>` : ''}
           ${p.id === room.adminId ? '<span class="admin-crown">👑</span>' : ''}
@@ -1158,6 +1160,41 @@ function animateCardTransfer(fromPlayerId, toPlayerId, card) {
   setTimeout(removeCard, FLIGHT_MS + HOLD_MS + 200);
 }
 
+// Show a card next to a player with a coloured tint + corner badge, then fade out.
+// kind: 'ask' (blue ?, on the asker) | 'reject' (red ✕, on the target who lacked it).
+function animateCardBadge(playerId, card, kind, lifeMs) {
+  const avatar = document.getElementById('avatar-' + playerId);
+  if (!avatar) return; // player not on screen — skip gracefully
+  const r = avatar.getBoundingClientRect();
+  const el = document.createElement('div');
+  el.className = kind + '-card';
+  el.style.left = (r.left + r.width * 0.9) + 'px';   // up-and-right of the avatar
+  el.style.top  = (r.top - r.height * 0.1) + 'px';
+  el.innerHTML = buildCardFaceHTML(card, 'sm');
+  const face = el.querySelector('.card-face');
+  if (face) {
+    const tint = document.createElement('div');
+    tint.className = kind + '-tint';
+    const mark = document.createElement('div');
+    mark.className = kind + '-mark';
+    mark.textContent = kind === 'ask' ? '?' : '✕';
+    face.appendChild(tint);
+    face.appendChild(mark);
+  }
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), lifeMs); // matches the CSS pop animation length
+}
+
+// Show the asked-for card with a blue ?, next to the asking player.
+function animateCardAsk(askerPlayerId, card) {
+  animateCardBadge(askerPlayerId, card, 'ask', 1400);
+}
+
+// Show the asked-for card, tinted red with a ✕, next to the player who didn't have it.
+function animateCardReject(targetPlayerId, card) {
+  animateCardBadge(targetPlayerId, card, 'reject', 1500);
+}
+
 function showEventOverlay({ askerId, askerName, targetId, targetName, card, hadCard }) {
   // Sound: a question was asked (plays for everyone)
   playMessageSentSound();
@@ -1167,9 +1204,15 @@ function showEventOverlay({ askerId, askerName, targetId, targetName, card, hadC
   // A new ask clears any lingering claim result overlay
   dismissClaimOverlay();
 
-  // Card fly animation runs even when the text overlay is suppressed
+  // First: show the card with a "?" on the asker to signal the request.
+  animateCardAsk(askerId, card);
+
+  // Then, after the question beat, the yes/no result plays on the target.
+  // These run even when the text overlay is suppressed.
   if (hadCard) {
     setTimeout(() => animateCardTransfer(targetId, askerId, card), 1400);
+  } else {
+    setTimeout(() => animateCardReject(targetId, card), 1400);
   }
 
   // If score overlay is open, don't show the ask slide now — it'll restore when score closes
