@@ -14,13 +14,13 @@ const rooms = {}; // code -> room
 
 const HALF_SUITS = [
   { id: 'low_hearts',   name: 'Low',  suit: '♥', cards: ['2♥','3♥','4♥','5♥','6♥','7♥'] },
-  { id: 'high_hearts',  name: 'High', suit: '♥', cards: ['9♥','10♥','J♥','Q♥','K♥','A♥'] },
+  { id: 'high_hearts',  name: 'High', suit: '♥', cards: ['9♥','T♥','J♥','Q♥','K♥','A♥'] },
   { id: 'low_clubs',    name: 'Low',  suit: '♣', cards: ['2♣','3♣','4♣','5♣','6♣','7♣'] },
-  { id: 'high_clubs',   name: 'High', suit: '♣', cards: ['9♣','10♣','J♣','Q♣','K♣','A♣'] },
+  { id: 'high_clubs',   name: 'High', suit: '♣', cards: ['9♣','T♣','J♣','Q♣','K♣','A♣'] },
   { id: 'low_diamonds', name: 'Low',  suit: '♦', cards: ['2♦','3♦','4♦','5♦','6♦','7♦'] },
-  { id: 'high_diamonds',name: 'High', suit: '♦', cards: ['9♦','10♦','J♦','Q♦','K♦','A♦'] },
+  { id: 'high_diamonds',name: 'High', suit: '♦', cards: ['9♦','T♦','J♦','Q♦','K♦','A♦'] },
   { id: 'low_spades',   name: 'Low',  suit: '♠', cards: ['2♠','3♠','4♠','5♠','6♠','7♠'] },
-  { id: 'high_spades',  name: 'High', suit: '♠', cards: ['9♠','10♠','J♠','Q♠','K♠','A♠'] },
+  { id: 'high_spades',  name: 'High', suit: '♠', cards: ['9♠','T♠','J♠','Q♠','K♠','A♠'] },
 ];
 
 function cardToHalfSuit(card) {
