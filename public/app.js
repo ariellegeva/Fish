@@ -106,7 +106,6 @@ let socket;
 let state = {
   adminIcon: '', joinIcon: '', // set after avatars load
   pendingCode: null,
-  selectedCount: 6,
   room: null,
   myHand: [],
   handOrder: [],   // player-controlled ordering of myHand (drag to rearrange)
@@ -123,12 +122,11 @@ let state = {
   claimSelectedCard: null, // card waiting for player click
   // panel
   panelCards: [],
-  rightPanelMode: 'ask', // 'ask' | 'claim'
+  rightPanelMode: 'ask', // 'ask' | 'claim' | 'chat'
   scoreOverlayOpen: false,
   lastAskResult: null,
   lastClaimResult: null, // persists until manually closed or next ask
   inCreateFlow: false,
-  maxPerTeam: 99,
 };
 
 let eventOverlayTimer = null;
@@ -137,8 +135,8 @@ let eventOverlayTimer = null;
 window.addEventListener('DOMContentLoaded', () => {
   try { if (localStorage.getItem('fish_sound') === '0') { soundEnabled = false; const el = document.getElementById('nav-sound'); if (el) el.textContent = '🔇'; } } catch {}
   buildAvatarGrids();
-  buildCountGrid();
   initSocket();
+  initLobbyControls();
 
   const urlCode = getUrlCode();
   if (urlCode) {
@@ -157,6 +155,8 @@ function initSocket() {
   socket.on('room_update', (room) => {
     const wasPlaying = state.room && state.room.phase === 'playing';
     state.room = room;
+    window.RTC?.syncPeers?.();
+    window.RTC?.updateNavControls?.();
     // Live-update the team-selection table while peeking
     if (!document.getElementById('page-join-team').classList.contains('hidden')) {
       renderTeamTable();
@@ -190,6 +190,11 @@ function initSocket() {
   socket.on('player_exited', ({ name }) => {
     document.getElementById('exit-modal-text').textContent = `${name} exited the game.`;
     document.getElementById('exit-modal').classList.remove('hidden');
+  });
+
+  socket.on('kicked', () => {
+    alert('You were removed from the lobby by the admin.');
+    goHome();
   });
 
   socket.on('ask_result',   (data) => showEventOverlay(data));
@@ -252,7 +257,7 @@ function showTab(name) {
 function updateNav() {
   const room = state.room; if (!room) return;
   document.getElementById('nav').classList.remove('hidden');
-  document.getElementById('nav-chat').style.display = room.settings.chatEnabled ? '' : 'none';
+  window.RTC?.updateNavControls?.();
   let ln = document.getElementById('nav-lobby');
   if (!ln) {
     ln = document.createElement('span');
@@ -311,21 +316,6 @@ function handleIconUpload(prefix) {
   };
   r.readAsDataURL(file);
 }
-function buildCountGrid() {
-  const counts = [6,8,7,10,9,5,2];
-  const grid = document.getElementById('count-grid');
-  counts.forEach(n => {
-    const b = document.createElement('div');
-    b.className = 'count-btn' + (n === state.selectedCount ? ' selected' : '');
-    b.innerHTML = `${n}${n===2 ? '<span class="cs-label">test</span>' : ''}`;
-    b.onclick = () => selectCount(n);
-    grid.appendChild(b);
-  });
-}
-function selectCount(n) {
-  state.selectedCount = n;
-  document.querySelectorAll('.count-btn').forEach(b => b.classList.toggle('selected', parseInt(b.textContent) === n));
-}
 
 // ===================== ADMIN FLOW =====================
 function goAdminSettings() {
@@ -338,7 +328,6 @@ function createRoom() {
   const name = document.getElementById('admin-name-input').value.trim();
   const icon = state.adminIcon;
   const settings = {
-    numPlayers: state.selectedCount,
     chatEnabled: document.getElementById('chat-toggle').checked,
     teamSelection: document.getElementById('team-selection-toggle').checked,
   };
@@ -382,7 +371,6 @@ function joinRoom() {
   // First check if team selection is on — peek without joining
   socket.emit('peek_room', { code, name }, (res) => {
     if (!res.ok) { document.getElementById('join-error').textContent = res.error || 'Could not join.'; return; }
-    state.maxPerTeam = res.maxPerTeam;
     if (res.room.settings.teamSelection) {
       // Show team page; don't join until they pick
       state.room = res.room;
@@ -425,34 +413,80 @@ function renderTeamTable() {
     tr.innerHTML = `<td>${t1[i] ? playerInline(t1[i]) : ''}</td><td>${t2[i] ? playerInline(t2[i]) : ''}</td>`;
     tbody.appendChild(tr);
   }
-  // Disable full teams
-  const max = state.maxPerTeam || 99;
-  const b1 = document.getElementById('join-team-1-btn');
-  const b2 = document.getElementById('join-team-2-btn');
-  if (b1) { b1.disabled = t1.length >= max; b1.textContent = t1.length >= max ? 'Team 1 full' : 'Join Team 1'; }
-  if (b2) { b2.disabled = t2.length >= max; b2.textContent = t2.length >= max ? 'Team 2 full' : 'Join Team 2'; }
 }
 
 // ===================== LOBBY =====================
+function initLobbyControls() {
+  const list = document.getElementById('lobby-player-list');
+  if (!list || list.dataset.delegated) return;
+  list.dataset.delegated = '1';
+  list.addEventListener('click', (e) => {
+    const teamBtn = e.target.closest('[data-lobby-team]');
+    if (teamBtn) {
+      e.preventDefault();
+      changeTeam(teamBtn.dataset.playerId, Number(teamBtn.dataset.lobbyTeam));
+      return;
+    }
+    const kickBtn = e.target.closest('[data-lobby-kick]');
+    if (kickBtn) {
+      e.preventDefault();
+      kickPlayer(kickBtn.dataset.playerId);
+    }
+  });
+}
+
 function renderLobby() {
   const room = state.room; if (!room) return;
   document.getElementById('lobby-code').textContent = room.code;
   const isAdmin = room.adminId === socket.id;
-  const canStart = isAdmin && room.players.length >= 2;
+  const canSelfChange = !isAdmin && room.settings.teamSelection;
   document.getElementById('lobby-start-btn-wrap').style.display = isAdmin ? '' : 'none';
-  document.getElementById('lobby-start-btn').disabled = !canStart;
-  const needed = room.settings.numPlayers - room.players.length;
+  document.getElementById('lobby-start-btn').disabled = false;
+  const count = room.players.length;
   document.getElementById('lobby-waiting-msg').textContent =
-    needed > 0 ? `Waiting for ${needed} more player${needed !== 1 ? 's' : ''}...` : 'All players present!';
-  document.getElementById('lobby-player-list').innerHTML = room.players.map(p => `
+    count === 1 ? 'Share the code — players can join anytime.' : `${count} player${count !== 1 ? 's' : ''} in lobby`;
+  document.getElementById('lobby-player-list').innerHTML = room.players.map(p => {
+    const canEdit = isAdmin || (canSelfChange && p.id === socket.id);
+    const kickBtn = isAdmin && p.id !== room.adminId
+      ? `<button type="button" class="lobby-kick-btn" data-lobby-kick data-player-id="${p.id}" title="Remove from lobby">✕</button>`
+      : '';
+    const teamControl = (team, active) => {
+      if (canEdit) {
+        return `<button type="button" class="lobby-team-btn${active ? ' active' : ''}" data-lobby-team="${team}" data-player-id="${p.id}">T${team}</button>`;
+      }
+      return `<span class="lobby-team-pill${active ? ' active' : ''}">T${team}</span>`;
+    };
+    const lockIcon = canEdit ? '' : '<span class="lobby-team-lock" title="Team assigned by host">🔒</span>';
+    return `
     <div class="player-card ${p.connected ? '' : 'disconnected'}">
       <div class="player-avatar avatar-t${p.team}">${isImg(p.icon) ? `<img src="${p.icon}">` : p.icon}</div>
       <div class="player-info">
         <div class="player-name">${p.name} ${p.id === room.adminId ? '👑' : ''}</div>
         <div class="player-meta">${p.connected ? 'Online' : 'Disconnected'}</div>
       </div>
-      <span class="team-badge team${p.team}">Team ${p.team}</span>
-    </div>`).join('');
+      <div class="lobby-team-controls${canEdit ? '' : ' readonly'}">
+        ${kickBtn}
+        ${lockIcon}
+        ${teamControl(1, p.team === 1)}
+        ${teamControl(2, p.team === 2)}
+      </div>
+    </div>`;
+  }).join('');
+}
+function changeTeam(playerId, team) {
+  if (!socket?.connected) return alert('Not connected to server.');
+  socket.timeout(5000).emit('change_team', { playerId, team }, (err, res) => {
+    if (err) return alert('Could not change team — try refreshing the page.');
+    if (!res?.ok) alert(res?.error || 'Could not change team');
+  });
+}
+function kickPlayer(playerId) {
+  if (!confirm('Remove this player from the lobby?')) return;
+  if (!socket?.connected) return alert('Not connected to server.');
+  socket.timeout(5000).emit('kick_player', { playerId }, (err, res) => {
+    if (err) return alert('Could not remove player — try refreshing the page.');
+    if (!res?.ok) alert(res?.error || 'Could not remove player');
+  });
 }
 function startGame() {
   socket.emit('start_game', {}, (res) => {
@@ -461,20 +495,13 @@ function startGame() {
   });
 }
 
-// ===================== RENDER ALL =====================
-function renderAll() {
-  updateNav();
-  const room = state.room; if (!room) return;
-  if (!document.getElementById('tab-lobby').classList.contains('hidden')) renderLobby();
-  if (!document.getElementById('tab-game').classList.contains('hidden'))  renderGameTab();
-  if (!document.getElementById('tab-settings').classList.contains('hidden')) renderSettings();
-}
-
 // ===================== GAME TAB =====================
 function renderGameTab() {
   const room = state.room; if (!room) return;
-  const qmb = document.getElementById('quick-msg-box');
-  if (qmb) qmb.style.display = room.settings.chatEnabled ? '' : 'none';
+  const chatOn = room.settings.chatEnabled;
+  const chatTab = document.getElementById('rp-tab-chat');
+  if (chatTab) chatTab.style.display = chatOn ? '' : 'none';
+  if (!chatOn && state.rightPanelMode === 'chat') state.rightPanelMode = 'ask';
   renderTurnBanner();
   renderOvalPlayers();
   renderHand();
@@ -527,6 +554,7 @@ function renderOvalPlayers() {
     const tile = document.createElement('div');
     tile.className = ['player-oval-tile', isCurrent?'current-turn':'', isClickable?'clickable':'',
       isTargeted?'targeted':'', !p.connected?'disconnected':''].join(' ');
+    tile.dataset.playerId = p.id;
     tile.style.left = xPct + '%';
     tile.style.top = yPct + '%';
     if (inClaimMode) {
@@ -541,7 +569,7 @@ function renderOvalPlayers() {
         ${bubble ? `<div class="player-bubble">${escHtml(bubble)}</div>` : ''}
         ${stackHTML}
         <div class="player-avatar-wrap">
-          <div class="player-avatar-big avatar-t${p.team}">${isImg(p.icon) ? `<img src="${p.icon}">` : p.icon}</div>
+          <div class="player-avatar-big avatar-t${p.team}" id="avatar-${p.id}"><span class="avatar-fallback">${isImg(p.icon) ? `<img src="${p.icon}">` : p.icon}</span></div>
           ${cardCount > 0 ? `<span class="card-count-corner">${cardCount}</span>` : ''}
           ${p.id === room.adminId ? '<span class="admin-crown">👑</span>' : ''}
         </div>
@@ -549,6 +577,8 @@ function renderOvalPlayers() {
       <div class="player-oval-name name-t${p.team}">${p.name}${isMe ? ' (you)' : ''}</div>`;
     container.appendChild(tile);
   });
+  window.RTC?.reattachAllVideos?.();
+  window.RTC?.updatePanning?.();
 }
 
 // ===================== CARD FAN =====================
@@ -794,9 +824,11 @@ function renderRightPanel() {
 
   document.getElementById('rp-ask').classList.toggle('hidden',   mode !== 'ask');
   document.getElementById('rp-claim').classList.toggle('hidden', mode !== 'claim');
+  document.getElementById('rp-chat').classList.toggle('hidden',  mode !== 'chat');
 
   document.getElementById('rp-tab-ask').classList.toggle('active',   mode === 'ask');
   document.getElementById('rp-tab-claim').classList.toggle('active', mode === 'claim');
+  document.getElementById('rp-tab-chat').classList.toggle('active',  mode === 'chat');
 
   if (mode === 'ask')   renderAskPanel();
   if (mode === 'claim') renderClaimPanel();
@@ -1070,6 +1102,60 @@ function buildCardFaceHTML(card, size = 'sm') {
   </div>`;
 }
 
+function animateCardTransfer(fromPlayerId, toPlayerId, card) {
+  const FLIGHT_MS = 1020; // 600ms × 170%
+  const HOLD_MS = 1000;
+  const MID_MS = 544;     // 320ms × 170%
+
+  const fromEl = document.getElementById('avatar-' + fromPlayerId);
+  const toEl = document.getElementById('avatar-' + toPlayerId);
+  if (!fromEl || !toEl) return;
+
+  const fromRect = fromEl.getBoundingClientRect();
+  const toRect = toEl.getBoundingClientRect();
+  const sx = fromRect.left + fromRect.width / 2;
+  const sy = fromRect.top + fromRect.height / 2;
+  const dx = toRect.left + toRect.width / 2;
+  const dy = toRect.top + toRect.height / 2;
+
+  const el = document.createElement('div');
+  el.className = 'flying-card';
+  el.innerHTML = buildCardFaceHTML(card, 'sm');
+  el.style.left = sx + 'px';
+  el.style.top = sy + 'px';
+  document.body.appendChild(el);
+
+  void el.offsetWidth;
+  requestAnimationFrame(() => {
+    el.classList.add('mid');
+    el.style.left = dx + 'px';
+    el.style.top = dy + 'px';
+    setTimeout(() => el.classList.remove('mid'), MID_MS);
+  });
+
+  let done = false;
+  let landed = false;
+  const removeCard = () => {
+    if (done) return;
+    done = true;
+    el.remove();
+  };
+  const onLand = () => {
+    if (landed) return;
+    landed = true;
+    toEl.classList.remove('avatar-landed');
+    void toEl.offsetWidth;
+    toEl.classList.add('avatar-landed');
+    setTimeout(removeCard, HOLD_MS);
+  };
+  el.addEventListener('transitionend', (e) => {
+    if (e.target !== el || e.propertyName !== 'left') return;
+    onLand();
+  });
+  setTimeout(() => { if (!landed) onLand(); }, FLIGHT_MS + 100);
+  setTimeout(removeCard, FLIGHT_MS + HOLD_MS + 200);
+}
+
 function showEventOverlay({ askerId, askerName, targetId, targetName, card, hadCard }) {
   // Sound: a question was asked (plays for everyone)
   playMessageSentSound();
@@ -1078,6 +1164,11 @@ function showEventOverlay({ askerId, askerName, targetId, targetName, card, hadC
 
   // A new ask clears any lingering claim result overlay
   dismissClaimOverlay();
+
+  // Card fly animation runs even when the text overlay is suppressed
+  if (hadCard) {
+    setTimeout(() => animateCardTransfer(targetId, askerId, card), 1400);
+  }
 
   // If score overlay is open, don't show the ask slide now — it'll restore when score closes
   if (state.scoreOverlayOpen) return;
@@ -1310,13 +1401,12 @@ function renderSettings() {
   const s = room.settings;
   document.getElementById('settings-admin-note').classList.toggle('hidden', isAdmin);
   document.getElementById('settings-view').innerHTML = `
-    <div class="toggle-row"><div class="toggle-label">Players<span class="sub">${s.numPlayers} players</span></div></div>
     <div class="toggle-row">
       <div class="toggle-label">Chat<span class="sub">${s.chatEnabled?'Enabled':'Disabled'}</span></div>
       ${isAdmin?`<label class="toggle"><input type="checkbox" ${s.chatEnabled?'checked':''} onchange="updateSetting('chatEnabled',this.checked)"><span class="toggle-slider"></span></label>`:''}
     </div>
     <div class="toggle-row">
-      <div class="toggle-label">Team selection<span class="sub">${s.teamSelection?'Players choose':'Auto-assigned'}</span></div>
+      <div class="toggle-label">Team selection<span class="sub">${s.teamSelection?'Players choose and change teams':'Auto-assigned'}</span></div>
       ${isAdmin&&room.phase==='lobby'?`<label class="toggle"><input type="checkbox" ${s.teamSelection?'checked':''} onchange="updateSetting('teamSelection',this.checked)"><span class="toggle-slider"></span></label>`:''}
     </div>
     <div class="toggle-row">
@@ -1342,7 +1432,7 @@ function sendChat() {
   socket.emit('chat_message', { text }); inp.value = '';
 }
 
-// Quick reaction buttons next to the table ("Wait!" / "OK").
+// Quick reaction buttons next to the table ("Wait!" / "OK" / "Grrr").
 // Logged to chat like any message; the chat_message echo drives the bubble.
 function sendQuickMessage(text) {
   socket.emit('chat_message', { text });
@@ -1351,7 +1441,7 @@ function sendQuickMessage(text) {
 // ===================== PLAYER SPEECH BUBBLES =====================
 const _bubbleTimers = {};
 function bubbleText(text) {
-  return text.length > 5 ? text.slice(0, 5) + '...' : text;
+  return text.length > 10 ? text.slice(0, 10) + '...' : text;
 }
 function showPlayerBubble(playerId, text) {
   state.bubbles[playerId] = bubbleText(text);
@@ -1423,6 +1513,7 @@ function exitGame() {
   socket.emit('exit_game', {}, () => { goHome(); });
 }
 function goHome() {
+  window.RTC?.stopAll?.();
   localStorage.removeItem('fish_session');
   if (eventOverlayTimer) { clearTimeout(eventOverlayTimer); eventOverlayTimer = null; }
   state.room = null; state.myHand = []; state.handOrder = []; state.bubbles = {}; state.inCreateFlow = false;
