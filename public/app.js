@@ -82,13 +82,13 @@ function playGameEndSound() {
 
 const HALF_SUITS = [
   { id: 'low_hearts',    name: 'Low',    suit: '♥', cards: ['2♥','3♥','4♥','5♥','6♥','7♥'],   red: true },
-  { id: 'high_hearts',   name: 'High',   suit: '♥', cards: ['9♥','10♥','J♥','Q♥','K♥','A♥'],  red: true },
+  { id: 'high_hearts',   name: 'High',   suit: '♥', cards: ['9♥','T♥','J♥','Q♥','K♥','A♥'],  red: true },
   { id: 'low_clubs',     name: 'Low',    suit: '♣', cards: ['2♣','3♣','4♣','5♣','6♣','7♣'],   red: false },
-  { id: 'high_clubs',    name: 'High',   suit: '♣', cards: ['9♣','10♣','J♣','Q♣','K♣','A♣'],  red: false },
+  { id: 'high_clubs',    name: 'High',   suit: '♣', cards: ['9♣','T♣','J♣','Q♣','K♣','A♣'],  red: false },
   { id: 'low_diamonds',  name: 'Low',    suit: '♦', cards: ['2♦','3♦','4♦','5♦','6♦','7♦'],   red: true },
-  { id: 'high_diamonds', name: 'High',   suit: '♦', cards: ['9♦','10♦','J♦','Q♦','K♦','A♦'],  red: true },
+  { id: 'high_diamonds', name: 'High',   suit: '♦', cards: ['9♦','T♦','J♦','Q♦','K♦','A♦'],  red: true },
   { id: 'low_spades',    name: 'Low',    suit: '♠', cards: ['2♠','3♠','4♠','5♠','6♠','7♠'],   red: false },
-  { id: 'high_spades',   name: 'High',   suit: '♠', cards: ['9♠','10♠','J♠','Q♠','K♠','A♠'],  red: false },
+  { id: 'high_spades',   name: 'High',   suit: '♠', cards: ['9♠','T♠','J♠','Q♠','K♠','A♠'],  red: false },
 ];
 
 function cardSuit(card) {
@@ -500,8 +500,6 @@ function startGame() {
 function renderGameTab() {
   const room = state.room; if (!room) return;
   const chatOn = room.settings.chatEnabled;
-  const qmb = document.getElementById('quick-msg-box');
-  if (qmb) qmb.style.display = chatOn ? '' : 'none';
   const chatTab = document.getElementById('rp-tab-chat');
   if (chatTab) chatTab.style.display = chatOn ? '' : 'none';
   if (!chatOn && state.rightPanelMode === 'chat') state.rightPanelMode = 'ask';
@@ -601,7 +599,7 @@ function buildCardFan(count, playerId) {
 
 // ===================== HAND ORDERING =====================
 const SUIT_ORDER = ['♠', '♥', '♦', '♣'];
-const RANK_ORDER = ['2','3','4','5','6','7','8','9','10','J','Q','K','A'];
+const RANK_ORDER = ['2','3','4','5','6','7','8','9','T','J','Q','K','A'];
 
 // Sort a list of cards grouped by suit, ascending by rank within each suit.
 function sortGroupedBySuit(cards) {

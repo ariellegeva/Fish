@@ -1147,29 +1147,14 @@ label { display: block; font-size: 13px; color: var(--text-muted); margin-bottom
   to   { transform: scale(1);  opacity: 1; }
 }
 
-/* ===== QUICK REACTION BOX ===== */
-#quick-msg-box {
-  position: absolute;
-  top: 16px; right: 16px;
-  z-index: 15;
-  background: #2f4a3a;
-  border: 3px solid #1f3328;
-  border-radius: 14px;
-  padding: 8px 12px 12px;
-  box-shadow: 0 4px 12px rgba(0,0,0,.25);
-}
-#quick-msg-title {
-  color: #d8e8dc;
-  font-size: 15px; font-weight: 800;
-  margin-bottom: 8px;
-}
-#quick-msg-btns { display: flex; flex-wrap: wrap; gap: 10px; }
+/* ===== QUICK REACTION BUTTONS (inside chat panel) ===== */
+#quick-msg-btns { display: flex; flex-wrap: wrap; gap: 8px; padding: 8px 12px; flex-shrink: 0; }
 .quick-msg-btn {
   background: #fff;
   border: none;
   border-radius: 10px;
-  padding: 10px 22px;
-  font-size: 16px; font-weight: 800;
+  padding: 7px 14px;
+  font-size: 13px; font-weight: 800;
   font-family: 'Nunito', sans-serif;
   color: #2d2d2d;
   cursor: pointer;
