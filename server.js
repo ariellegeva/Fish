@@ -28,7 +28,7 @@ function cardToHalfSuit(card) {
 }
 
 function generateCode() {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ234566666666666666677777777777777789';
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ234566666666666666666666666677777777777777777777777789';
   let code;
   do { code = Array.from({length:4}, () => chars[Math.floor(Math.random()*chars.length)]).join(''); }
   while (rooms[code]);
