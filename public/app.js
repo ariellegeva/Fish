@@ -1475,7 +1475,7 @@ function sendChat() {
   socket.emit('chat_message', { text }); inp.value = '';
 }
 
-// Quick reaction buttons next to the table ("Wait!" / "OK" / "Grrr").
+// Quick reaction buttons next to the table ("Wait!" / "OK" / "Grrr" / "Sensational").
 // Logged to chat like any message; the chat_message echo drives the bubble.
 function sendQuickMessage(text) {
   socket.emit('chat_message', { text });
